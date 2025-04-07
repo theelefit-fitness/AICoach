@@ -78,6 +78,26 @@ const AIFitnessCoach = () => {
     }
   };
 
+  // Add this object for meal calorie ranges
+  const mealCalories = {
+    breakfast: {
+      min: 300,
+      max: 400
+    },
+    lunch: {
+      min: 500,
+      max: 600
+    },
+    snack: {
+      min: 150,
+      max: 200
+    },
+    dinner: {
+      min: 500,
+      max: 700
+    }
+  };
+
   // Utility functions
   const cleanText = (text) => {
     return text
@@ -1184,6 +1204,102 @@ Remember: ALWAYS respond in English regardless of the input language.`;
     };
   }, [showPopup, currentPopupGoal]);
 
+  // Helper function to estimate calories for a meal item
+  const estimateCalories = (mealItem) => {
+    // Common keywords and their estimated calorie contributions
+    const calorieEstimates = {
+      'oatmeal': 150,
+      'yogurt': 120,
+      'greek yogurt': 130,
+      'berries': 50,
+      'banana': 105,
+      'apple': 95,
+      'orange': 62,
+      'nuts': 160,
+      'almond': 165,
+      'peanut butter': 190,
+      'eggs': 140,
+      'egg': 70,
+      'toast': 75,
+      'bread': 80,
+      'whole grain': 90,
+      'chicken': 165,
+      'salmon': 208,
+      'fish': 180,
+      'tuna': 120,
+      'salad': 100,
+      'rice': 130,
+      'quinoa': 120,
+      'avocado': 234,
+      'protein': 120,
+      'smoothie': 150,
+      'vegetables': 50,
+      'veggies': 50,
+      'broccoli': 55,
+      'sweet potato': 103,
+      'potato': 160,
+      'hummus': 166,
+      'olive oil': 120,
+      'cheese': 113,
+      'milk': 103,
+      'protein bar': 200,
+      'granola': 120,
+      'honey': 64,
+      'fruit': 60,
+      'steak': 250,
+      'beef': 213,
+      'turkey': 165,
+      'tofu': 144,
+      'lentils': 230,
+      'beans': 132,
+      'soup': 170,
+      'wrap': 245,
+      'sandwich': 260,
+      'pasta': 200,
+      'noodles': 190,
+      'snack': 100,
+    };
+
+    // Convert meal item to lowercase for matching
+    const itemLower = mealItem.toLowerCase();
+    
+    // Calculate total calories based on matching keywords
+    let totalCalories = 0;
+    let matched = false;
+
+    // Check for each keyword in the meal item
+    Object.entries(calorieEstimates).forEach(([keyword, calories]) => {
+      if (itemLower.includes(keyword)) {
+        totalCalories += calories;
+        matched = true;
+      }
+    });
+
+    // If no specific ingredients matched, estimate based on meal type indicators
+    if (!matched) {
+      if (itemLower.includes('breakfast')) totalCalories = 300;
+      else if (itemLower.includes('lunch')) totalCalories = 400;
+      else if (itemLower.includes('dinner')) totalCalories = 500;
+      else if (itemLower.includes('snack')) totalCalories = 150;
+      else totalCalories = 200; // Default calories if no matches
+    }
+
+    return totalCalories;
+  };
+
+  // Calculate calories for a meal (sum of all items)
+  const calculateMealCalories = (items) => {
+    return items.reduce((total, item) => total + estimateCalories(item), 0);
+  };
+
+  // Calculate total daily calories
+  const calculateDailyCalories = (meals) => {
+    return meals.reduce((total, meal) => {
+      const mealCalories = calculateMealCalories(meal.items);
+      return total + mealCalories;
+    }, 0);
+  };
+
   return (
     <div className="ai-coach-container">
       <h1>
@@ -1277,16 +1393,22 @@ Remember: ALWAYS respond in English regardless of the input language.`;
                     data-meal={`day${dayPlan.dayNumber}`}
                     onClick={() => toggleAccordion('meal', `day${dayPlan.dayNumber}`)}
                   >
-                    <div style={{ display: 'flex', alignItems: 'center' }}>
+                    <div className="day-header-content">
                       <i className="fas fa-calendar-day accordion-icon"></i>
                       <span style={{ fontSize: '1.1rem', fontWeight: '600' }}>Day {dayPlan.dayNumber}</span>
                     </div>
-                    <i
-                      className="fas fa-chevron-right accordion-arrow"
-                      style={{
-                        transform: openMealAccordion === `day${dayPlan.dayNumber}` ? 'rotate(90deg)' : 'rotate(0deg)'
-                      }}
-                    ></i>
+                    <div className="day-header-right">
+                      <div className="total-calories">
+                        <i className="fas fa-fire-alt"></i>
+                        {Math.round(calculateDailyCalories(dayPlan.meals))} cal/day
+                      </div>
+                      <i
+                        className="fas fa-chevron-right accordion-arrow"
+                        style={{
+                          transform: openMealAccordion === `day${dayPlan.dayNumber}` ? 'rotate(90deg)' : 'rotate(0deg)'
+                        }}
+                      ></i>
+                    </div>
                   </div>
                   <div
                     className="accordion-content"
@@ -1305,16 +1427,21 @@ Remember: ALWAYS respond in English regardless of the input language.`;
                             data-meal-type={meal.mealType}
                             onClick={() => toggleAccordion('meal-sub', `${dayPlan.dayNumber}-${meal.mealType}`)}
                           >
-                            <div style={{ display: 'flex', alignItems: 'center' }}>
+                            <div className="meal-header-content">
                               <i className={`fas ${meal.icon} nested-accordion-icon`}></i>
                               <span style={{ fontSize: '1rem', fontWeight: '500' }}>{meal.title}</span>
                             </div>
-                            <i
-                              className="fas fa-chevron-right nested-accordion-arrow"
-                              style={{
-                                transform: openMealSubAccordion === `${dayPlan.dayNumber}-${meal.mealType}` ? 'rotate(90deg)' : 'rotate(0deg)'
-                              }}
-                            ></i>
+                            <div className="meal-header-right">
+                              <span className="calories-info">
+                                {calculateMealCalories(meal.items)} cal
+                              </span>
+                              <i
+                                className="fas fa-chevron-right nested-accordion-arrow"
+                                style={{
+                                  transform: openMealSubAccordion === `${dayPlan.dayNumber}-${meal.mealType}` ? 'rotate(90deg)' : 'rotate(0deg)'
+                                }}
+                              ></i>
+                            </div>
                           </div>
                           <div
                             className="nested-accordion-content"

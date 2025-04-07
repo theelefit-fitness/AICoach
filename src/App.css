@@ -900,7 +900,7 @@ h1 {
   max-width: 90%;
   max-height: 85vh;
   background: #ffffff;
-  box-shadow: 0 10px 50px rgba(0, 0, 0, 0.2), 0 6px 20px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 10px 50px rgba(0, 0, 0, 0.2);
   border-radius: 16px;
   padding: 30px;
   z-index: 1001;
@@ -933,16 +933,13 @@ h1 {
 
 .goal-popup-form {
   width: 100%;
-  max-height: 65vh;
+  max-height: calc(65vh - 80px); /* Adjust for button height */
   overflow-y: auto;
-  padding-right: 10px;
+  padding-right: 16px;
+  margin-bottom: 80px; /* Space for buttons */
   display: flex;
   flex-direction: column;
   gap: 20px;
-  margin-top: 20px;
-  scrollbar-width: thin;
-  scrollbar-color: #d1d5db transparent;
-  padding-bottom: 10px;
 }
 
 .goal-popup-icon {
@@ -1080,17 +1077,18 @@ h1 {
 
 .form-group input,
 .form-group select {
-  padding: 10px 14px;
+  padding: 12px 16px;
   border-radius: 8px;
   border: 1px solid #e2e8f0;
-  background-color: #f8fafc;
+  background-color: rgba(255, 255, 255, 0.9);
   font-size: 1rem;
-  color: #334155;
+  color: #1a202c;
   transition: all 0.3s ease;
   outline: none;
   width: 100%;
   box-sizing: border-box;
-  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.05);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
 
 .form-group input[type="number"] {
@@ -1099,17 +1097,16 @@ h1 {
 
 .form-group input:focus,
 .form-group select:focus {
-  border-color: #60a5fa;
-  box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.2), inset 0 1px 2px rgba(0, 0, 0, 0.05);
-  background-color: #fff;
-  outline: none;
-  filter: none;
-  backdrop-filter: none;
+  border-color: #7c3aed;
+  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.2);
+  background-color: #ffffff;
+  transform: translateY(-2px);
 }
 
 .form-group input:hover,
 .form-group select:hover {
-  border-color: #cbd5e1;
+  border-color: #7c3aed;
+  background-color: #ffffff;
 }
 
 /* Range slider styling */
@@ -1153,46 +1150,30 @@ h1 {
 /* Submit button enhancement */
 .popup-buttons {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-end;
+  gap: 16px;
+  margin-top: 24px;
+  padding: 16px 0;
   width: 100%;
-  margin-top: 10px;
-  gap: 15px;
+  position: sticky;
+  bottom: 0;
+  background: #ffffff;
+  border-top: 1px solid #e2e8f0;
+  z-index: 10;
 }
 
 .popup-button {
-  flex: 1;
   padding: 12px 24px;
-  border-radius: 10px;
-  border: none;
+  border-radius: 8px;
   font-weight: 600;
   font-size: 1rem;
   cursor: pointer;
   transition: all 0.3s ease;
-  position: relative;
-  overflow: hidden;
+  min-width: 120px;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  z-index: 1;
-}
-
-.popup-button::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(120deg, rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0) 50%);
-  z-index: -1;
-  transition: all 0.3s ease;
-  transform: translateX(-100%);
-}
-
-.popup-button:hover::before {
-  transform: translateX(0);
 }
 
 .popup-button.cancel {
@@ -1204,21 +1185,24 @@ h1 {
 .popup-button.cancel:hover {
   background-color: #e5e7eb;
   color: #1f2937;
-}
-
-.popup-button.submit {
-  background: linear-gradient(135deg, #3b82f6, #2563eb);
-  color: white;
-}
-
-.popup-button.submit:hover {
-  background: linear-gradient(135deg, #2563eb, #1d4ed8);
   transform: translateY(-2px);
 }
 
+.popup-button.submit {
+  background: linear-gradient(135deg, #7c3aed, #6d28d9);
+  color: white;
+  border: none;
+  box-shadow: 0 4px 6px rgba(124, 58, 237, 0.2);
+}
+
+.popup-button.submit:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 8px rgba(124, 58, 237, 0.3);
+  background: linear-gradient(135deg, #6d28d9, #5b21b6);
+}
+
 .popup-button:active {
-  transform: translateY(1px);
-  box-shadow: 0 2px 3px rgba(0, 0, 0, 0.1);
+  transform: translateY(0);
 }
 
 /* Health Conditions Select Enhancement */
@@ -1297,68 +1281,51 @@ h1 {
   }
 }
 
-/* Responsive styles for popup */
+/* Responsive styles for popup and buttons */
 @media (max-width: 768px) {
+  .popup-buttons {
+    flex-direction: row; /* Keep buttons side by side */
+    padding: 12px;
+    gap: 12px;
+  }
+
+  .popup-button {
+    flex: 1;
+    padding: 12px 16px;
+    min-width: unset;
+  }
+
   .goal-popup {
-    max-width: 95%;
-    width: calc(100% - 30px);
-    padding: 1.5rem;
-    max-height: calc(100vh - 60px);
-    top: 30px;
+    width: 95%;
+    padding: 20px;
+    max-height: 90vh;
   }
-  
+
   .goal-popup-form {
-    max-height: 70vh;
-    padding-right: 0.5rem;
-  }
-  
-  .goal-popup-icon {
-    font-size: 2.5rem;
-  }
-  
-  .goal-popup-title {
-    font-size: 1.3rem;
-  }
-  
-  .goal-popup-close {
-    top: 0.7rem;
-    right: 0.7rem;
+    max-height: calc(70vh - 60px);
+    margin-bottom: 60px;
   }
 }
 
-/* Very small screens */
-@media (max-width: 480px) {
-  .goal-popup {
-    max-width: 100%;
-    width: calc(100% - 20px);
-    padding: 1.2rem;
-    border-radius: 15px;
-    top: 20px;
-    max-height: calc(100vh - 40px);
-  }
-  
-  .goal-popup-form {
-    gap: 1rem;
-  }
-  
-  /* Force single column layout on very small screens */
-  .form-group {
-    grid-column: 1 / -1;
-  }
+/* Form field animations */
+@keyframes focusField {
+  0% { transform: translateY(0); }
+  100% { transform: translateY(-2px); }
 }
 
-.loading-text {
-  margin-top: 1.2rem;
-  font-size: 1.2rem;
-  font-weight: 600;
-  text-align: center;
-  background: linear-gradient(to right, #6366f1, #8b5cf6, #d946ef, #ec4899, #f472b6);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  background-size: 300% 300%;
-  animation: gradientMove 4s linear infinite;
-  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+@keyframes blurField {
+  0% { transform: translateY(-2px); }
+  100% { transform: translateY(0); }
+}
+
+.form-group input:focus,
+.form-group select:focus {
+  animation: focusField 0.3s ease forwards;
+}
+
+.form-group input:not(:focus),
+.form-group select:not(:focus) {
+  animation: blurField 0.3s ease forwards;
 }
 
 /* Required field indicator styling */
@@ -1653,5 +1620,144 @@ label[for] span.required-asterisk {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 20px;
+  }
+}
+
+/* Meal header with calories */
+.nested-accordion-header {
+  padding: 12px 16px;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: all 0.3s ease;
+}
+
+.meal-header-content {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.meal-header-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.calories-info {
+  font-size: 0.9rem;
+  font-weight: 500;
+  padding: 4px 12px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  white-space: nowrap;
+}
+
+/* Breakfast calories */
+.nested-accordion-header[data-meal-type="breakfast"] .calories-info {
+  background: rgba(255, 255, 255, 0.25);
+  color: #ffffff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+/* Lunch calories */
+.nested-accordion-header[data-meal-type="lunch"] .calories-info {
+  background: rgba(255, 255, 255, 0.25);
+  color: #ffffff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+/* Snack calories */
+.nested-accordion-header[data-meal-type="snack"] .calories-info {
+  background: rgba(255, 255, 255, 0.25);
+  color: #ffffff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+/* Dinner calories */
+.nested-accordion-header[data-meal-type="dinner"] .calories-info {
+  background: rgba(255, 255, 255, 0.25);
+  color: #ffffff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+/* Hover effect for calories */
+.nested-accordion-header:hover .calories-info {
+  background: rgba(255, 255, 255, 0.3);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Day header with total calories */
+.accordion-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.2rem;
+  background: linear-gradient(135deg, #7c3aed, #8b5cf6);
+  font-weight: 600;
+  font-size: 1.1rem;
+  color: white;
+  border-radius: 12px 12px 0 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  width: 100%;
+  box-sizing: border-box;
+  height: 70px;
+}
+
+.day-header-content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.day-header-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.total-calories {
+  font-size: 0.95rem;
+  font-weight: 500;
+  padding: 6px 14px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.3s ease;
+}
+
+.total-calories i {
+  font-size: 0.9rem;
+  opacity: 0.9;
+}
+
+.accordion-header:hover .total-calories {
+  background: rgba(255, 255, 255, 0.3);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Responsive styles for calories display */
+@media (max-width: 480px) {
+  .total-calories {
+    font-size: 0.85rem;
+    padding: 4px 10px;
+  }
+  
+  .day-header-content {
+    gap: 8px;
+  }
+  
+  .day-header-right {
+    gap: 12px;
   }
 }
