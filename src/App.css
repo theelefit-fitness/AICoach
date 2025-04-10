@@ -503,10 +503,24 @@ h1 {
   }
 }
 
-/* Enhanced plans container styles */
-.plans-container {
+.plans-grid{
+ 
+  width: 1100px;
+  max-width: 100%;
+  margin-inline: auto;
+  height: auto;
   display: grid;
   grid-template-columns: 1fr 1fr;
+   justify-items: center;
+   align-items: enter;
+  gap: 1rem;
+  margin-top: 1.5rem;
+ 
+}
+/* Enhanced plans container styles */
+.plans-container {
+ display: grid;
+ grid-template-columns: 1fr 1fr;
   gap: 2rem;
   margin-top: 1.5rem;
   max-width: 1000px;
@@ -519,7 +533,6 @@ h1 {
   animation: scaleUp 0.8s ease-out;
 }
 
-/* Plan section styles with distinct backgrounds */
 .plan-section {
   display: flex;
   flex-direction: column;
@@ -729,9 +742,7 @@ h1 {
 }
 
 /* Apply enhanced animation to plan containers */
-.plans-container {
-  animation: scaleUp 0.8s ease-out;
-}
+
 
 /* Apply smoother animations to accordion items */
 .accordion-item {
@@ -1760,4 +1771,42 @@ label[for] span.required-asterisk {
   .day-header-right {
     gap: 12px;
   }
+}
+
+.plan-overview {
+  background: #f8f9fa;
+  border-radius: 10px;
+  padding: 20px;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.timeline-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+  color: #2c3e50;
+}
+
+.timeline-info i {
+  color: #3498db;
+}
+
+.timeline-info .separator {
+  color: #bdc3c7;
+  margin: 0 5px;
+}
+
+.expected-results {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #2c3e50;
+  padding-top: 10px;
+  border-top: 1px solid #eee;
+}
+
+.expected-results i {
+  color: #27ae60;
 }

@@ -14,6 +14,9 @@ const AIFitnessCoach = () => {
   const [openWorkoutAccordion, setOpenWorkoutAccordion] = useState('');
   const [showPopup, setShowPopup] = useState(false);
   const [currentPopupGoal, setCurrentPopupGoal] = useState(null);
+  const [timeline, setTimeline] = useState(3); // Default 3 months
+  const [weeklySchedule, setWeeklySchedule] = useState(7); // Default 7 days
+  const [expectedResults, setExpectedResults] = useState('');
   const [formData, setFormData] = useState({
     age: '',
     gender: '',
@@ -117,11 +120,43 @@ const AIFitnessCoach = () => {
   };
 
   const formatResponse = (text) => {
-    text = text.replace(/[│├─└┌┐•●◆◇▪▫■□★☆\[\]{}*]/g, ''); // Remove more special characters
-    text = text.replace(/\n{3,}/g, '\n\n');
-    text = text.replace(/\s{2,}/g, ' ');
-    text = text.replace(/(\d+\)|\d+\.|•|-)\s*/g, '');
-    return text.trim();
+    // Only remove special characters while preserving numbers, dots, and parentheses
+    let cleaned = text
+      .replace(/[│├─└┌┐•●◆◇▪▫■□★☆\[\]{}*]/g, '') // Remove special characters
+      .replace(/\s{3,}/g, '\n\n') // Normalize multiple spaces to double newlines
+      .trim();
+    
+    // Pre-processing for better day detection - add newlines before days
+    cleaned = cleaned.replace(/(Day\s*\d+\s*[-:])/gi, '\n$1');
+    
+    // Ensure consistent formatting for meal plans
+    cleaned = cleaned.replace(/MEAL_PLAN(?:\s+for\s+[\w\s]+)?:/gi, 'MEAL_PLAN:');
+    cleaned = cleaned.replace(/WORKOUT_PLAN(?:\s+for\s+[\w\s]+)?:/gi, 'WORKOUT_PLAN:');
+    
+    // Handle variations in header formats
+    cleaned = cleaned.replace(/\*\*MEAL PLAN\*\*/gi, 'MEAL_PLAN:');
+    cleaned = cleaned.replace(/###\s*MEAL PLAN\s*/gi, 'MEAL_PLAN:');
+    cleaned = cleaned.replace(/\*\*WORKOUT PLAN\*\*/gi, 'WORKOUT_PLAN:');
+    cleaned = cleaned.replace(/###\s*WORKOUT PLAN\s*/gi, 'WORKOUT_PLAN:');
+    
+    // Cleanup markdown formatting
+    cleaned = cleaned.replace(/\*\*Day\s*(\d+):\*\*\s*/gi, 'Day $1:');
+    cleaned = cleaned.replace(/\*\*Total Daily Calories:\*\*\s*(\d+)/gi, 'Total Daily Calories: $1');
+    cleaned = cleaned.replace(/\*\*Timeline:\*\*\s*(\d+)\s*months?/gi, 'Timeline: $1 months');
+    cleaned = cleaned.replace(/\*\*Weekly Schedule:\*\*\s*(\d+)\s*days?/gi, 'Weekly Schedule: $1 days');
+    cleaned = cleaned.replace(/\*\*Expected Results:\*\*\s*/gi, 'Expected Results: ');
+    cleaned = cleaned.replace(/\*\*Day\s*(\d+)\s*-\s*([^:]+):\*\*/gi, 'Day $1 - $2:');
+    cleaned = cleaned.replace(/\*\*/g, '');
+    cleaned = cleaned.replace(/\*/g, '');
+    cleaned = cleaned.replace(/---/g, '');
+    
+    // Ensure there's a clear separator between meal plan and workout plan if both exist
+    if (cleaned.includes('MEAL_PLAN:') && cleaned.includes('WORKOUT_PLAN:')) {
+      // Make sure WORKOUT_PLAN: is on a new line with proper spacing
+      cleaned = cleaned.replace(/WORKOUT_PLAN:/g, '\n\nWORKOUT_PLAN:');
+    }
+    
+    return cleaned;
   };
 
   // Animation functions
@@ -177,58 +212,190 @@ const AIFitnessCoach = () => {
     console.log('Animation sequence started');
   };
 
+  // Helper functions for icons and types
+  const getMealIcon = (mealType) => {
+    const iconMap = {
+      'Breakfast': 'fa-sun',
+      'Lunch': 'fa-utensils',
+      'Snack': 'fa-apple-alt',
+      'Dinner': 'fa-moon'
+    };
+    return iconMap[mealType] || 'fa-utensils';
+  };
+
+  const getWorkoutIcon = (focusArea) => {
+    if (focusArea.toLowerCase().includes('cardio')) return 'fa-heartbeat';
+    if (focusArea.toLowerCase().includes('lower')) return 'fa-running';
+    if (focusArea.toLowerCase().includes('upper')) return 'fa-dumbbell';
+    if (focusArea.toLowerCase().includes('hiit')) return 'fa-bolt';
+    if (focusArea.toLowerCase().includes('active')) return 'fa-walking';
+    return 'fa-dumbbell';
+  };
+
+  const getWorkoutType = (focusArea) => {
+    if (focusArea.toLowerCase().includes('cardio')) return 'Cardio & Endurance';
+    if (focusArea.toLowerCase().includes('lower')) return 'Lower Body';
+    if (focusArea.toLowerCase().includes('upper')) return 'Upper Body';
+    if (focusArea.toLowerCase().includes('hiit')) return 'High Intensity';
+    if (focusArea.toLowerCase().includes('active')) return 'Active Recovery';
+    if (focusArea.toLowerCase().includes('total')) return 'Total Body';
+    return 'Mixed Training';
+  };
+
   // Event handlers
   const handleRecommendation = async () => {
-    const userPrompt = fitnessGoal.trim();
-    if (!userPrompt || isLoading) return;
+    if (!fitnessGoal || isLoading) return;
     
-    // Always show loading and get a fresh response when the button is clicked
-    console.log('Setting loading state to true for direct recommendation');
     setIsLoading(true);
     setShowPlans(false);
-    setLastProcessedGoal(userPrompt);
-    
+    setLastProcessedGoal(fitnessGoal);
+
     try {
-      console.clear();
-      console.log('Sending request for prompt:', userPrompt);
+      // Extract requested days from the prompt if specified
+      // Improved regex to catch all formats mentioning days
+      let requestedDays = 7; // Default to 7 days
       
-      // Make sure to explicitly request both meal and workout plans for any health-related query
-      const enhancedUserPrompt = `${userPrompt} Please create both a MEAL_PLAN and WORKOUT_PLAN for this goal.`;
+      // Try multiple patterns to catch different ways of specifying days
+      const dayPatterns = [
+        /(\d+)[ -]day/i,                    // "4-day" or "4 day"
+        /(\d+)[ -]days/i,                  // "4-days" or "4 days"
+        /for[ -](\d+)[ -]days/i,           // "for 4 days"
+        /(\d+)[ -]days[ -](?:a[ -])?week/i, // "4 days a week" or "4 days week"
+        /(\d+)[ -]times[ -](?:a[ -])?week/i // "4 times a week"
+      ];
+      
+      for (const pattern of dayPatterns) {
+        const match = fitnessGoal.match(pattern);
+        if (match) {
+          requestedDays = parseInt(match[1]);
+          console.log(`User requested ${requestedDays} days - matched pattern: ${pattern}`);
+          break;
+        }
+      }
+
+      // Always ensure reasonable bounds
+      requestedDays = Math.min(Math.max(requestedDays, 1), 14);
+      console.log(`Final requested days count: ${requestedDays}`);
+      
+      // Check if this is a workout-focused request
+      const isWorkoutFocused = /workout|exercise|training|routine|gym/i.test(fitnessGoal);
+      console.log(`Is workout-focused request: ${isWorkoutFocused}`);
+      
+      // Look for cultural/dietary preferences in the input
+      const culturalTerms = [
+        'indian', 'chinese', 'mexican', 'italian', 'mediterranean', 
+        'japanese', 'thai', 'korean', 'french', 'american', 'greek',
+        'vegan', 'vegetarian', 'keto', 'halal', 'kosher', 'gluten-free', 
+        'pescatarian', 'paleo'
+      ];
+      
+      let detectedCulturalPreferences = [];
+      culturalTerms.forEach(term => {
+        if (fitnessGoal.toLowerCase().includes(term)) {
+          detectedCulturalPreferences.push(term);
+        }
+      });
+      
+      if (detectedCulturalPreferences.length > 0) {
+        console.log(`Detected cultural/dietary preferences: ${detectedCulturalPreferences.join(', ')}`);
+      }
+      
+      // Look for physical attributes in input (age, weight, height)
+      const ageMatch = fitnessGoal.match(/(\d+)\s*(?:years|yrs|yr|y)(?:\s*old)?/i);
+      const weightMatch = fitnessGoal.match(/(\d+(?:\.\d+)?)\s*(?:kg|kgs|pounds|lbs)/i);
+      const heightMatch = fitnessGoal.match(/(\d+(?:\.\d+)?)\s*(?:cm|centimeters|meters|m|feet|ft|foot|inches|inch|in)/i);
+      
+      let physicalAttributes = {};
+      if (ageMatch) physicalAttributes.age = ageMatch[1];
+      if (weightMatch) physicalAttributes.weight = weightMatch[1];
+      if (heightMatch) physicalAttributes.height = heightMatch[1];
+      
+      if (Object.keys(physicalAttributes).length > 0) {
+        console.log(`Detected physical attributes:`, physicalAttributes);
+      }
+
+      // Enhanced user prompt with the appropriate number of days and detected preferences
+      // Make the day count extremely explicit with redundant phrasing
+      let enhancedUserPrompt;
+      
+      if (isWorkoutFocused) {
+        // For workout-focused requests, emphasize the workout plan and day count even more
+        enhancedUserPrompt = `${fitnessGoal} IMPORTANT: Please provide EXACTLY ${requestedDays} days of workout plan - no more, no less. Also include a corresponding ${requestedDays}-day meal plan to support these workouts. Each day must include Breakfast, Lunch, Snack, and Dinner with exactly 3 items per meal type, and 4 exercises per workout day.`;
+      } else {
+        // Standard format for other requests
+        enhancedUserPrompt = `${fitnessGoal} Please provide EXACTLY ${requestedDays} days of meal plan and EXACTLY ${requestedDays} days of workout plan. I need ${requestedDays} days total, not more. Each day must include Breakfast, Lunch, Snack, and Dinner with exactly 3 items per meal type, and 4 exercises per workout day.`;
+      }
       
       const systemPrompt = `You are a fitness assistant. ALWAYS respond in English regardless of the input language.
 
-IMPORTANT: All responses MUST be in English, even if the user's prompt is in another language.
+IMPORTANT FORMATTING RULES:
+1. All responses MUST be in English, even if the user's prompt is in another language.
+2. Default time period is 3 months unless specified otherwise.
+3. Default workout days is 7 days per week unless specified otherwise.
+4. NEVER exceed the number of days requested by the user.
+5. EXACTLY 3 items per meal type (no more, no less).
+6. EXACTLY 4 exercises per workout day (no more, no less).
 
-MEAL_PLAN:
-Provide a detailed meal plan for each section (Breakfast, Snack, Lunch, Dinner) with multiple items listed and clear varieties. Use numbers (1., 2., 3.) instead of dashes. The meal type (e.g., Breakfast, Snack) and all meal descriptions must be in English.
+MEAL_PLAN FORMAT:
+For each day (Day 1 to 7):
+Day X:
+- Breakfast (XXX calories):
+  1. [Meal item 1]
+  2. [Meal item 2]
+  3. [Meal item 3]
+- Lunch (XXX calories):
+  1. [Meal item 1]
+  2. [Meal item 2]
+  3. [Meal item 3]
+- Snack (XXX calories):
+  1. [Snack item 1]
+  2. [Snack item 2]
+  3. [Snack item 3]
+- Dinner (XXX calories):
+  1. [Meal item 1]
+  2. [Meal item 2]
+  3. [Meal item 3]
 
-WORKOUT_PLAN:
-- If the user specifies a number of days (e.g., "3 days", "5 days"), provide a workout plan for exactly that many days.
-- If no specific days are mentioned, provide a standard 7-day plan.
-- Each day should be clearly marked as "Day 1:", "Day 2:", etc.
-- List multiple exercises per day, each numbered for better readability.
-- All sections and exercise descriptions MUST be in English.
-- For muscle gain focus on progressive overload and proper exercise splits.
+Total Daily Calories: XXXX
 
-IMPORTANT: ALWAYS include both a MEAL_PLAN section and a WORKOUT_PLAN section in your response, regardless of what the user asks for.
+WORKOUT_PLAN FORMAT:
+Timeline: X months
+Weekly Schedule: 7 days per week
+Expected Results: [Describe expected results after following this plan for the specified months]
 
-Ensure each section follows this format exactly to maintain readability and parsing integrity.
+For each day (Day 1 to 7):
+Day X - [Focus Area]:
+1. [Exercise 1 with sets/reps]
+2. [Exercise 2 with sets/reps]
+3. [Exercise 3 with sets/reps]
+4. [Exercise 4 with sets/reps]
+
+Notes:
+- Each meal MUST include calorie count
+- Each meal type MUST have EXACTLY 3 items
+- Each day MUST have a total calorie count
+- Each workout day MUST have EXACTLY 4 exercises
+- Workouts MUST be appropriate for the specified fitness level
+- Include expected results after following the plan for specified months
+- Adjust intensity based on experience level
+- Consider any health conditions in recommendations
+
 Remember: ALWAYS respond in English regardless of the input language.`;
 
-      const daysMatch = userPrompt.match(/(\d+)\s*days?/i);
-      const requestedDays = daysMatch ? parseInt(daysMatch[1]) : 7;
+      const combinedPrompt = `${systemPrompt}\n\nUser Query: ${enhancedUserPrompt}`;
 
-      const enhancedPrompt = daysMatch 
-        ? `${enhancedUserPrompt} (Please provide exactly ${requestedDays} days of workouts in English)`
-        : `${enhancedUserPrompt} (Please provide response in English with both MEAL_PLAN and WORKOUT_PLAN)`;
-
-      const combinedPrompt = `${systemPrompt}\n\nUser Query: ${enhancedPrompt}`;
-
-      // Add a timestamp to force a fresh response 
+      // Add timestamp to force a fresh response 
       const timestamp = new Date().getTime();
       const forceNewPrompt = `${combinedPrompt}\n\nTimestamp: ${timestamp}`;
+      
+      // Log detection and request details
+      console.log('Prompt details:', {
+        originalPrompt: fitnessGoal,
+        requestedDays,
+        culturalPreferences: detectedCulturalPreferences,
+        physicalAttributes
+      });
 
-      console.log('Sending API request to backend...');
       const response = await fetch('http://127.0.0.1:5000/chat', {
         method: 'POST',
         headers: {
@@ -236,647 +403,434 @@ Remember: ALWAYS respond in English regardless of the input language.`;
         },
         body: JSON.stringify({ 
           prompt: forceNewPrompt,
-          forceNew: true  // Add flag to bypass cache on the server
+          forceNew: true
         })
       });
 
       if (!response.ok) {
-        console.error('Server response not OK:', response.status, response.statusText);
-        throw new Error(`Failed to fetch data from server: ${response.status} ${response.statusText}`);
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
 
       const data = await response.json();
-      console.log('Raw response from server:', data);
+      console.log('Raw response:', data.reply);
+
+      // Format the response to ensure it has the required structure
+      let formattedResponse = data.reply;
       
-      if (!data.reply) {
-        console.error('No reply in response data:', data);
-        throw new Error('Server response missing reply field');
+      // Convert markdown headers to our format
+      formattedResponse = formattedResponse
+        .replace(/###\s*Meal Plan\s*/g, 'MEAL_PLAN:\n')
+        .replace(/###\s*Workout Plan\s*/g, '\nWORKOUT_PLAN:\n')
+        .replace(/\*\*Day\s*(\d+):\*\*\s*/g, 'Day $1:\n')
+        .replace(/\*\*Total Daily Calories:\*\*\s*(\d+)/g, 'Total Daily Calories: $1')
+        .replace(/\*\*Timeline:\*\*\s*(\d+)\s*months?/g, 'Timeline: $1 months')
+        .replace(/\*\*Weekly Schedule:\*\*\s*(\d+)\s*days?/g, 'Weekly Schedule: $1 days')
+        .replace(/\*\*Expected Results:\*\*\s*/g, 'Expected Results: ')
+        .replace(/\*\*Day\s*(\d+)\s*-\s*([^:]+):\*\*/g, 'Day $1 - $2:')
+        .replace(/\*\*/g, '')
+        .replace(/\*/g, '')
+        .replace(/---/g, '');
+
+      // Ensure we have the required markers
+      if (!formattedResponse.includes('MEAL_PLAN:')) {
+        formattedResponse = 'MEAL_PLAN:\n' + formattedResponse;
       }
       
-      const cleanedResponse = formatResponse(data.reply);
-      
-      console.log('=== Fitness Plan Generated ===');
-      console.log('Goal:', cleanText(userPrompt));
-      console.log('Requested Days:', requestedDays);
-      console.log('\nChatGPT Response:');
-      console.log(cleanedResponse);
-      console.log('==================');
-      
-      // Check if response contains the expected sections
-      if (!cleanedResponse.includes('MEAL_PLAN:') || !cleanedResponse.includes('WORKOUT_PLAN:')) {
-        console.error('Response missing required sections:', cleanedResponse);
-        
-        // Force format the response if needed
-        const forcedResponse = `MEAL_PLAN:\nBreakfast: ${data.reply.includes('Breakfast') ? data.reply.split('Breakfast')[1].split('\n')[0] : 'Healthy breakfast options'}\n\nLunch: ${data.reply.includes('Lunch') ? data.reply.split('Lunch')[1].split('\n')[0] : 'Nutritious lunch options'}\n\nDinner: ${data.reply.includes('Dinner') ? data.reply.split('Dinner')[1].split('\n')[0] : 'Balanced dinner options'}\n\nWORKOUT_PLAN:\nDay 1: ${data.reply.includes('Day 1') ? data.reply.split('Day 1')[1].split('\n')[0] : 'Full body workout'}\n`;
-        
-        console.log('Reformatted response:', forcedResponse);
-        parseResponse(forcedResponse, requestedDays);
-      } else {
-        parseResponse(cleanedResponse, requestedDays);
+      if (!formattedResponse.includes('WORKOUT_PLAN:')) {
+        const lastDayMatch = formattedResponse.match(/Day\s*7:.*?(?=WORKOUT_PLAN:|$)/s);
+        if (lastDayMatch) {
+          const insertIndex = lastDayMatch.index + lastDayMatch[0].length;
+          formattedResponse = formattedResponse.slice(0, insertIndex) + '\n\nWORKOUT_PLAN:\n' + formattedResponse.slice(insertIndex);
+        }
       }
-      
-      setIsLoading(false);
+
+      console.log('Formatted response:', formattedResponse);
+      parseResponse(formattedResponse);
       setShowPlans(true);
     } catch (error) {
-      console.error('Error fetching data:', error);
+      console.error('Error:', error);
+      alert('Failed to get recommendations. Please try again.');
+    } finally {
       setIsLoading(false);
-      alert(`Failed to fetch recommendations: ${error.message}. Please try again.`);
     }
   };
 
-  const parseResponse = (response, requestedDays) => {
-    console.log('Parsing response...');
-    const sections = response.split(/(?=MEAL_PLAN:|WORKOUT_PLAN:)/i);
-    console.log('Split into sections:', sections.length);
+  const parseResponse = (response) => {
+    // Clean up the response first
+    let cleanedResponse = formatResponse(response);
     
-    const mealSections = [];
-    const workoutSections = [];
+    console.log('Cleaned response for parsing:', cleanedResponse);
     
-    // If we don't have any clear sections, try to extract meal and workout info
-    if (sections.length <= 1) {
-      console.log('No clear sections found, attempting to extract meal and workout info');
+    // Split into meal plan and workout plan sections 
+    // Use a more robust regex that accounts for various formats
+    const mealPlanMatch = cleanedResponse.match(/MEAL_PLAN:([\s\S]*?)(?=WORKOUT_PLAN:|$)/i);
+    
+    // Try multiple patterns to extract workout plan
+    let workoutPlanMatch = cleanedResponse.match(/WORKOUT_PLAN:([\s\S]*?)$/i);
+    if (!workoutPlanMatch) {
+      console.log('Trying alternate workout plan pattern');
+      // Alternative pattern for cases where 'WORKOUT_PLAN:' might be formatted differently
+      workoutPlanMatch = cleanedResponse.match(/(?:WORKOUT|EXERCISE)[\s_]*PLAN:?([\s\S]*?)$/i);
+    }
+    
+    // Last resort - if we have markdown sections, try to find workout section after meal plan
+    if (!workoutPlanMatch && cleanedResponse.includes('###')) {
+      console.log('Trying to find workout section using markdown headers');
+      const sections = cleanedResponse.split(/###\s+/);
+      for (let i = 0; i < sections.length; i++) {
+        if (sections[i].toLowerCase().includes('workout') || 
+            sections[i].toLowerCase().includes('exercise')) {
+          workoutPlanMatch = {1: sections[i]};
+          break;
+        }
+      }
+    }
+    
+    if (!mealPlanMatch) {
+      console.error('Response missing required meal plan section');
+      return;
+    }
+    
+    const mealPlanRaw = mealPlanMatch[1].trim();
+    const workoutPlanRaw = workoutPlanMatch ? workoutPlanMatch[1].trim() : '';
+    
+    console.log('Extracted meal plan:', mealPlanRaw);
+    console.log('Extracted workout plan:', workoutPlanRaw);
+    
+    if (!workoutPlanRaw) {
+      console.warn('No workout plan section found - attempting to extract workout info from full response');
+      // Search for workout-like content in the entire response as a fallback
+      const fullResponseLines = cleanedResponse.split('\n');
+      const workoutLines = [];
+      let foundWorkoutSection = false;
       
-      // Try to extract meal sections
-      const mealTypes = ['Breakfast', 'Lunch', 'Dinner', 'Snack'];
-      mealTypes.forEach((mealType, index) => {
-        if (response.includes(mealType)) {
-          const mealTypeRegex = new RegExp(`${mealType}[:\\s](.+?)(?=(?:${mealTypes.join('|')})|WORKOUT_PLAN|$)`, 'is');
-          const match = response.match(mealTypeRegex);
-          
-          if (match && match[1]) {
-            const items = match[1].split('\n')
-              .map(line => line.trim())
-              .filter(line => line && line.length > 2 && !line.includes(mealType))
-              .map(item => cleanItemText(item));
-            
-            if (items.length > 0) {
-              // Limit to exactly 3 items
-              const limitedItems = items.slice(0, 3);
-              // If less than 3 items, add generic ones to reach 3
-              while (limitedItems.length < 3) {
-                if (mealType.toLowerCase().includes('breakfast')) {
-                  limitedItems.push('Healthy breakfast option with protein and fiber');
-                } else if (mealType.toLowerCase().includes('lunch')) {
-                  limitedItems.push('Balanced lunch with vegetables and lean protein');
-                } else if (mealType.toLowerCase().includes('dinner')) {
-                  limitedItems.push('Nutritious dinner with complex carbs and protein');
-                } else {
-                  limitedItems.push('Healthy snack option under 200 calories');
-                }
-              }
-              
-              mealSections.push({
-                id: `meal-${index}`,
-                title: mealType,
-                mealType: mealType.toLowerCase(),
-                items: limitedItems,
-                icon: mealType.toLowerCase().includes('breakfast') ? 'fa-sun' : 
-                      mealType.toLowerCase().includes('lunch') ? 'fa-utensils' : 
-                      mealType.toLowerCase().includes('dinner') ? 'fa-moon' : 'fa-apple-alt'
-              });
+      // Look for workout-related keywords in lines
+      for (let i = 0; i < fullResponseLines.length; i++) {
+        const line = fullResponseLines[i];
+        if (!foundWorkoutSection) {
+          // Check if this line indicates the start of workout content
+          if (line.match(/work\s*out|exercise|training|fitness/i) && 
+              !line.match(/meal|breakfast|lunch|dinner|snack/i)) {
+            foundWorkoutSection = true;
+            workoutLines.push(line);
+          }
+        } else {
+          // Once we've found the workout section, add lines that don't look like meal content
+          if (!line.match(/meal|breakfast|lunch|dinner|snack/i) ||
+              line.match(/day\s*\d+|exercise|workout|training/i)) {
+            workoutLines.push(line);
+          }
+        }
+      }
+      
+      if (workoutLines.length > 0) {
+        console.log('Found potential workout content:', workoutLines.join('\n'));
+        // Use this as our workout plan raw text
+        const extractedWorkoutContent = workoutLines.join('\n');
+        // Only use this if it looks like workout content
+        if (extractedWorkoutContent.match(/day\s*\d+|exercise|workout|training/i)) {
+          console.log('Using extracted workout content');
+          workoutPlanRaw = extractedWorkoutContent;
+        }
+      }
+    }
+
+    // First, detect how many days are in the response
+    const dayMatches = mealPlanRaw.match(/Day\s*\d+:/gi) || [];
+    let numDays = dayMatches.length;
+    
+    // Fallback to default if no days detected
+    if (numDays === 0) {
+      // Look for a requested day count in the input
+      const daysMatch = fitnessGoal.match(/(\d+)[ -]day/i);
+      if (daysMatch) {
+        numDays = parseInt(daysMatch[1]);
+        console.log(`No days detected in response, using requested days from input: ${numDays}`);
+      } else {
+        numDays = 7;
+        console.warn('No days detected in meal plan and none in input, defaulting to 7 days');
+      }
+    } else {
+      // Try to extract the actual day numbers
+      let highestDay = 0;
+      dayMatches.forEach(match => {
+        const dayNum = parseInt(match.match(/\d+/)[0]);
+        if (dayNum > highestDay) highestDay = dayNum;
+      });
+      
+      // Use the highest day number found
+      if (highestDay > 0 && highestDay !== numDays) {
+        console.log(`Found highest day ${highestDay} which differs from day count ${numDays}, using highest day`);
+        numDays = highestDay;
+      }
+    }
+    
+    console.log(`Detected ${numDays} days in the meal plan response`);
+
+    // Process meal plans by day
+    const mealPlansByDay = [];
+    let currentDay = null;
+    let currentMealType = null;
+    let currentMealItems = [];
+
+    // Initialize array with detected number of days
+    for (let i = 1; i <= numDays; i++) {
+      mealPlansByDay.push({
+        dayNumber: i,
+        meals: [
+          {
+            type: 'Breakfast',
+            calories: 0,
+            items: []
+          },
+          {
+            type: 'Lunch',
+            calories: 0,
+            items: []
+          },
+          {
+            type: 'Snack',
+            calories: 0,
+            items: []
+          },
+          {
+            type: 'Dinner',
+            calories: 0,
+            items: []
+          }
+        ]
+      });
+    }
+
+    // Split meal plan into lines and process
+    const mealPlanLines = mealPlanRaw.split('\n').map(line => line.trim()).filter(Boolean);
+    
+    mealPlanLines.forEach(line => {
+      // Check for new day
+      const dayMatch = line.match(/Day\s*(\d+):/i);
+      if (dayMatch) {
+        currentDay = parseInt(dayMatch[1]);
+        currentMealType = null;
+        currentMealItems = [];
+        return;
+      }
+
+      // Check for meal type with calories - handle multiple formats
+      const mealTypeMatch = line.match(/(Breakfast|Lunch|Snack|Dinner)\s*\((\d+)\s*calories\):/i);
+      if (mealTypeMatch) {
+        currentMealType = mealTypeMatch[1];
+        const calories = parseInt(mealTypeMatch[2]);
+        
+        // Update calories for current meal type
+        if (currentDay) {
+          const dayIndex = currentDay - 1;
+          if (dayIndex >= 0 && dayIndex < mealPlansByDay.length) {
+            const mealIndex = mealPlansByDay[dayIndex].meals.findIndex(m => m.type === currentMealType);
+            if (mealIndex !== -1) {
+              mealPlansByDay[dayIndex].meals[mealIndex].calories = calories;
             }
           }
         }
-      });
-      
-      // Try to extract workout days
-      for (let day = 1; day <= requestedDays; day++) {
-        const dayRegex = new RegExp(`Day ${day}[:\\s](.+?)(?=Day ${day+1}|$)`, 'is');
-        const match = response.match(dayRegex);
-        
-        if (match && match[1]) {
-          const exercises = match[1].split('\n')
-            .map(line => line.trim())
-            .filter(line => line && line.length > 2 && !line.includes(`Day ${day}`))
-            .map(exercise => cleanItemText(exercise));
-          
-          if (exercises.length > 0) {
-            // Limit to exactly 3 exercises
-            const limitedExercises = exercises.slice(0, 3);
-            // If less than 3 exercises, add generic ones to reach 3
-            while (limitedExercises.length < 3) {
-              limitedExercises.push(`Exercise ${limitedExercises.length + 1} for Day ${day}`);
+        return;
+      }
+
+      // If line starts with a number or bullet, it's a meal item
+      if (/^(\d+\.|[\-•●])/.test(line)) {
+        const item = line.replace(/^(\d+\.|[\-•●])\s*/, '').trim();
+        if (currentDay && currentMealType) {
+          const dayIndex = currentDay - 1;
+          if (dayIndex >= 0 && dayIndex < mealPlansByDay.length) {
+            const mealIndex = mealPlansByDay[dayIndex].meals.findIndex(m => m.type === currentMealType);
+            if (mealIndex !== -1) {
+              mealPlansByDay[dayIndex].meals[mealIndex].items.push(item);
             }
+          }
+        }
+      }
+    });
+
+    // Process workout plan
+    const workoutSections = [];
+    let currentWorkoutDay = null;
+    let currentWorkoutType = null;
+    let currentExercises = [];
+    
+    // Make sure we use the same number of days for workouts as detected in meal plan
+    // unless workout plan explicitly has a different number of days
+    let workoutDayCount = numDays;
+    if (workoutPlanRaw) {
+      const workoutDayMatches = workoutPlanRaw.match(/Day\s*\d+/gi) || [];
+      if (workoutDayMatches.length > 0) {
+        // Try to extract the actual day numbers
+        let highestWorkoutDay = 0;
+        workoutDayMatches.forEach(match => {
+          const dayNum = parseInt(match.match(/\d+/)[0]);
+          if (dayNum > highestWorkoutDay) highestWorkoutDay = dayNum;
+        });
+        
+        if (highestWorkoutDay > 0) {
+          console.log(`Detected ${highestWorkoutDay} days in workout plan`);
+          // Use the meal plan day count by default
+          workoutDayCount = numDays;
+        }
+      }
+    } else {
+      console.error("No workout plan found in response!");
+    }
+
+    console.log(`Using ${workoutDayCount} days for workout plan`);
+
+    // Initialize array with appropriate number of days
+    for (let i = 1; i <= workoutDayCount; i++) {
+      workoutSections.push({
+        dayNumber: i,
+        workoutType: 'Workout',
+        exercises: []
+      });
+    }
+
+    if (workoutPlanRaw) {
+      const workoutPlanLines = workoutPlanRaw.split('\n').map(line => line.trim()).filter(Boolean);
+      let isProcessingWorkout = false;
+      let timelineFound = false;
+      let expectedResultsFound = false;
+
+      console.log("Processing workout plan with lines:", workoutPlanLines.length);
+
+      workoutPlanLines.forEach((line, index) => {
+        console.log(`Processing workout line ${index}: ${line}`);
+        
+        // Capture Timeline and Expected Results but don't process as workout days
+        if (line.includes('Timeline:')) {
+          timelineFound = true;
+          const timelineMatch = line.match(/Timeline:\s*(\d+)\s*months?/i);
+          if (timelineMatch) {
+            setTimeline(parseInt(timelineMatch[1]));
+          }
+          return;
+        }
+        
+        if (line.includes('Weekly Schedule:')) {
+          const scheduleMatch = line.match(/Weekly Schedule:\s*(\d+)\s*days?/i);
+          if (scheduleMatch) {
+            setWeeklySchedule(parseInt(scheduleMatch[1]));
+          }
+          return;
+        }
+        
+        if (line.includes('Expected Results:')) {
+          expectedResultsFound = true;
+          const resultsText = line.replace(/Expected Results:\s*/i, '').trim();
+          setExpectedResults(resultsText);
+          return;
+        }
+
+        // Check for workout day header - use a more lenient regex pattern
+        // Try multiple patterns to catch different formats
+        let dayMatch = line.match(/Day\s*(\d+)(?:\s*-\s*|\s*:\s*)([^:]+)(?::|$)/i);
+        if (!dayMatch) {
+          // Try alternate format
+          dayMatch = line.match(/Day\s*(\d+)\s*[-:]?\s*(.*)/i);
+        }
+        
+        if (dayMatch) {
+          currentWorkoutDay = parseInt(dayMatch[1]);
+          currentWorkoutType = dayMatch[2] ? dayMatch[2].trim() : 'Workout';
+          
+          // Clean up the workout type if it contains colons
+          if (currentWorkoutType.includes(':')) {
+            currentWorkoutType = currentWorkoutType.replace(/:/g, '').trim();
+          }
+          
+          currentExercises = [];
+          isProcessingWorkout = true;
+          
+          console.log(`Found workout day: ${currentWorkoutDay}, type: ${currentWorkoutType}`);
+          
+          // Update workout type for this day
+          const dayIndex = currentWorkoutDay - 1;
+          if (dayIndex >= 0 && dayIndex < workoutSections.length) {
+            workoutSections[dayIndex].workoutType = currentWorkoutType;
+          } else {
+            console.warn(`Workout day ${currentWorkoutDay} is out of range (max: ${workoutSections.length})`);
+          }
+          return;
+        }
+
+        // If we're processing a workout and line starts with a number or bullet, it's an exercise
+        // Use a more flexible pattern to detect exercise items
+        if (isProcessingWorkout && (/^(\d+\.|[\-•●])/.test(line) || /^\d+\s*[.)]/.test(line))) {
+          const exercise = line.replace(/^(\d+\s*[.)]|[\-•●])\s*/, '').trim();
+          if (currentWorkoutDay) {
+            const dayIndex = currentWorkoutDay - 1;
+            if (dayIndex >= 0 && dayIndex < workoutSections.length) {
+              console.log(`Adding exercise to day ${currentWorkoutDay}: ${exercise}`);
+              workoutSections[dayIndex].exercises.push({
+                number: workoutSections[dayIndex].exercises.length + 1,
+                description: exercise
+              });
+            } else {
+              console.warn(`Cannot add exercise - day ${currentWorkoutDay} out of range (max: ${workoutSections.length})`);
+            }
+          } else {
+            console.warn(`Cannot add exercise - no current workout day set`);
+          }
+        }
+      });
+
+      // If no day sections were found but there are exercise-like entries
+      // Try to extract exercises directly without day headers
+      if (workoutSections.every(section => section.exercises.length === 0)) {
+        console.log("No workout days were detected with exercises, trying fallback parsing");
+        
+        // Look for lines that could be exercises (numbered items)
+        let exerciseLines = workoutPlanLines.filter(line => 
+          /^(\d+\s*[.)]|[\-•●])/.test(line) && 
+          !line.includes('Timeline:') && 
+          !line.includes('Weekly Schedule:') && 
+          !line.includes('Expected Results:')
+        );
+        
+        console.log(`Found ${exerciseLines.length} potential exercise lines without day headers`);
+        
+        // If we have exercises but no days, distribute them evenly
+        if (exerciseLines.length > 0) {
+          const exercisesPerDay = Math.max(Math.min(4, Math.ceil(exerciseLines.length / workoutDayCount)), 1);
+          
+          for (let dayIndex = 0; dayIndex < workoutDayCount; dayIndex++) {
+            const dayExercises = exerciseLines.splice(0, exercisesPerDay);
+            if (dayExercises.length === 0) break;
             
-            workoutSections.push({
-              id: `workout-${day-1}`,
-              dayNumber: day,
-              mainTitle: 'Full Body',
-              workoutType: 'Mixed Training',
-              exercises: limitedExercises,
-              icon: 'fa-dumbbell'
+            // Add these exercises to the current day
+            dayExercises.forEach(line => {
+              const exercise = line.replace(/^(\d+\s*[.)]|[\-•●])\s*/, '').trim();
+              workoutSections[dayIndex].exercises.push({
+                number: workoutSections[dayIndex].exercises.length + 1,
+                description: exercise
+              });
             });
+            
+            // Set a workout type if none exists
+            if (workoutSections[dayIndex].workoutType === 'Workout') {
+              workoutSections[dayIndex].workoutType = 'General Fitness';
+            }
           }
         }
       }
     } else {
-      // Process each section as before
-      sections.forEach(section => {
-        const sectionText = section.trim();
-        
-        if (sectionText.startsWith('MEAL_PLAN:')) {
-          const mealPlanText = sectionText.replace('MEAL_PLAN:', '').trim();
-          if (!mealPlanText) return;
-          
-          const meals = mealPlanText.split(/(?=Breakfast:|Lunch:|Dinner:|Snack:)/i)
-            .filter(section => section.trim());
-          
-          meals.forEach((mealSection, index) => {
-            const lines = mealSection.split('\n')
-              .map(line => line.trim())
-              .filter(line => line && !line.toLowerCase().includes('meal_plan'));
-            
-            if (lines.length < 2) return;
-            
-            const title = cleanText(lines[0].trim());
-            if (!title.toLowerCase().match(/breakfast|lunch|dinner|snack/)) return;
-            
-            const items = lines.slice(1)
-              .map(item => cleanItemText(item.replace(/^\d+[\.\)]\s*/, '')))
-              .filter(item => item && item.length > 2);
-            
-            if (items.length === 0) return;
-            
-            // Limit to exactly 3 items
-            const limitedItems = items.slice(0, 3);
-            // If less than 3 items, add generic ones to reach 3
-            const mealType = title.toLowerCase().replace(':', '');
-            while (limitedItems.length < 3) {
-              if (mealType.toLowerCase().includes('breakfast')) {
-                limitedItems.push('Healthy breakfast option with protein and fiber');
-              } else if (mealType.toLowerCase().includes('lunch')) {
-                limitedItems.push('Balanced lunch with vegetables and lean protein');
-              } else if (mealType.toLowerCase().includes('dinner')) {
-                limitedItems.push('Nutritious dinner with complex carbs and protein');
-              } else {
-                limitedItems.push('Healthy snack option under 200 calories');
-              }
-            }
-            
-            mealSections.push({
-              id: `meal-${index}`,
-              title,
-              mealType,
-              items: limitedItems,
-              icon: mealType.includes('breakfast') ? 'fa-sun' : 
-                    mealType.includes('lunch') ? 'fa-utensils' : 
-                    mealType.includes('dinner') ? 'fa-moon' : 'fa-apple-alt'
-            });
-          });
-        } else if (sectionText.startsWith('WORKOUT_PLAN:')) {
-          const workoutPlanText = sectionText.replace('WORKOUT_PLAN:', '').trim();
-          if (!workoutPlanText) return;
-          
-          const workouts = workoutPlanText.split(/(?=Day \d+:|Day \d+ -)/i)
-            .filter(day => {
-              const dayText = day.trim();
-              if (!dayText || !dayText.toLowerCase().includes('day')) return false;
-              
-              const dayMatch = dayText.match(/Day (\d+)/i);
-              if (!dayMatch) return false;
-              
-              const dayNum = parseInt(dayMatch[1]);
-              return dayNum <= requestedDays;
-            });
-          
-          workouts.forEach((day, index) => {
-            const lines = day.split('\n')
-              .map(line => line.trim())
-              .filter(line => line && !line.toLowerCase().includes('workout_plan'));
-            
-            if (lines.length < 2) return;
-            
-            const titleLine = cleanText(lines[0]);
-            const dayMatch = titleLine.match(/Day (\d+)/i);
-            if (!dayMatch) return;
-            
-            const dayNumber = parseInt(dayMatch[1]);
-            const title = titleLine.replace(/^Day \d+[:\-]\s*/, '').trim();
-            
-            const exercises = lines.slice(1)
-              .map(exercise => cleanItemText(exercise.replace(/^\d+[\.\)]\s*/, '')))
-              .filter(exercise => exercise && exercise.length > 2);
-            
-            if (exercises.length === 0) return;
-            
-            // Limit to exactly 3 exercises
-            const limitedExercises = exercises.slice(0, 3);
-            // If less than 3 exercises, add generic ones to reach 3
-            while (limitedExercises.length < 3) {
-              limitedExercises.push(`Exercise ${limitedExercises.length + 1} for Day ${dayNumber}`);
-            }
-            
-            const exerciseText = limitedExercises.join(' ').toLowerCase();
-            let workoutType = '';
-            let mainTitle = '';
-            
-            if (exerciseText.includes('leg') || exerciseText.includes('squat')) {
-              mainTitle = 'Lower Body';
-              workoutType = 'Leg Day';
-            } else if (exerciseText.includes('chest') || exerciseText.includes('push')) {
-              mainTitle = 'Upper Body';
-              workoutType = 'Chest & Triceps';
-            } else if (exerciseText.includes('back') || exerciseText.includes('pull')) {
-              mainTitle = 'Upper Body';
-              workoutType = 'Back & Biceps';
-            } else if (exerciseText.includes('shoulder')) {
-              mainTitle = 'Upper Body';
-              workoutType = 'Shoulders & Arms';
-            } else if (exerciseText.includes('cardio')) {
-              mainTitle = 'Cardio';
-              workoutType = 'Cardio & Endurance';
-            } else {
-              mainTitle = 'Full Body';
-              workoutType = 'Mixed Training';
-            }
-            
-            workoutSections.push({
-              id: `workout-${index}`,
-              dayNumber,
-              mainTitle,
-              workoutType,
-              exercises: limitedExercises,
-              icon: workoutType.includes('Leg') ? 'fa-running' :
-                    workoutType.includes('Cardio') ? 'fa-heartbeat' : 'fa-dumbbell'
-            });
-          });
-        }
-      });
+      console.error("No workout plan content to process");
     }
 
-    console.log('Parsed meal sections:', mealSections.length);
-    console.log('Parsed workout sections:', workoutSections.length);
-
-    // If we still have no sections, create some defaults
-    if (mealSections.length === 0) {
-      // Create structured meal sections instead of a single general one
-      const defaultMealSections = [
-        {
-          id: 'meal-breakfast',
-          title: 'Breakfast',
-          mealType: 'breakfast',
-          items: [
-            'Oatmeal with berries and nuts',
-            'Greek yogurt with honey',
-            'Veggie omelette with whole grain toast'
-          ].map(item => cleanItemText(item)),
-          icon: 'fa-sun'
-        },
-        {
-          id: 'meal-lunch',
-          title: 'Lunch',
-          mealType: 'lunch',
-          items: [
-            'Grilled chicken salad with olive oil dressing',
-            'Quinoa bowl with vegetables and lean protein',
-            'Turkey wrap with whole grain tortilla'
-          ].map(item => cleanItemText(item)),
-          icon: 'fa-utensils'
-        },
-        {
-          id: 'meal-snack',
-          title: 'Snack',
-          mealType: 'snack',
-          items: [
-            'Apple slices with almond butter',
-            'Carrot sticks with hummus',
-            'Handful of mixed nuts'
-          ].map(item => cleanItemText(item)),
-          icon: 'fa-apple-alt'
-        },
-        {
-          id: 'meal-dinner',
-          title: 'Dinner',
-          mealType: 'dinner',
-          items: [
-            'Baked salmon with roasted vegetables',
-            'Grilled lean steak with steamed broccoli',
-            'Stir fry with tofu and mixed vegetables'
-          ].map(item => cleanItemText(item)),
-          icon: 'fa-moon'
-        }
-      ];
-      
-      // Add all default meal sections
-      mealSections.push(...defaultMealSections);
-    }
-
-    // Reorganize meal plans by days to match workout days
-    const mealPlansByDay = [];
-    const numDays = requestedDays;
+    // Log the processed data for debugging
+    console.log('Processed meal plans:', mealPlansByDay);
+    console.log('Processed workouts:', workoutSections);
     
-    // Get all available meal types
-    const mealTypes = ['breakfast', 'lunch', 'snack', 'dinner'];
-    
-    // Create a meal plan for each day with unique meals
-    for (let day = 1; day <= numDays; day++) {
-      const dayMeals = {
-        id: `meal-day-${day}`,
-        dayNumber: day,
-        meals: []
-      };
-      
-      // Define unique meals for each day and type
-      const daySpecificMeals = {
-        'breakfast': [
-          // Day 1
-          [
-            'Oatmeal with berries and nuts',
-            'Greek yogurt with honey and granola',
-            'Vegetable omelette with whole grain toast'
-          ],
-          // Day 2
-          [
-            'Whole grain pancakes with maple syrup and fresh fruit',
-            'Avocado toast with poached eggs',
-            'Protein smoothie with banana and spinach'
-          ],
-          // Day 3 
-          [
-            'Breakfast burrito with eggs, beans, and vegetables',
-            'Cottage cheese with pineapple and walnuts',
-            'Whole grain cereal with almond milk and sliced banana'
-          ],
-          // Day 4
-          [
-            'Scrambled eggs with smoked salmon and whole grain bread',
-            'Chia seed pudding with berries and honey',
-            'Whole grain toast with peanut butter and banana'
-          ],
-          // Day 5
-          [
-            'Quinoa breakfast bowl with fruits and nuts',
-            'Protein pancakes with Greek yogurt topping',
-            'Vegetable frittata with a side of fruit'
-          ],
-          // Day 6
-          [
-            'Breakfast quesadilla with eggs and vegetables',
-            'Overnight oats with apple and cinnamon',
-            'Protein waffles with fresh berries'
-          ],
-          // Day 7
-          [
-            'Egg white scramble with vegetables and feta cheese',
-            'Smoothie bowl with granola and mixed seeds',
-            'Whole grain toast with hummus and sliced tomatoes'
-          ]
-        ],
-        'lunch': [
-          // Day 1
-          [
-            'Grilled chicken salad with olive oil dressing',
-            'Quinoa bowl with vegetables and lean protein',
-            'Turkey wrap with whole grain tortilla'
-          ],
-          // Day 2
-          [
-            'Tuna salad sandwich on whole grain bread',
-            'Lentil soup with a side of mixed greens',
-            'Chicken and vegetable stir-fry with brown rice'
-          ],
-          // Day 3
-          [
-            'Mediterranean chickpea salad with feta cheese',
-            'Sweet potato and black bean bowl',
-            'Grilled salmon with roasted vegetables'
-          ],
-          // Day 4
-          [
-            'Turkey and avocado wrap with mixed vegetables',
-            'Cauliflower rice bowl with grilled shrimp',
-            'Quinoa salad with roasted vegetables and lemon dressing'
-          ],
-          // Day 5
-          [
-            'Chicken and vegetable soup with whole grain crackers',
-            'Beef and broccoli with brown rice',
-            'Greek salad with grilled chicken and olive oil dressing'
-          ],
-          // Day 6
-          [
-            'Spinach salad with grilled tofu and pumpkin seeds',
-            'Turkey burger with sweet potato fries',
-            'Stuffed bell peppers with ground turkey and quinoa'
-          ],
-          // Day 7
-          [
-            'Sushi bowl with brown rice, avocado and salmon',
-            'Vegetable and lentil curry with brown rice',
-            'Chicken Caesar salad with homemade dressing'
-          ]
-        ],
-        'snack': [
-          // Day 1
-          [
-            'Apple slices with almond butter',
-            'Carrot sticks with hummus',
-            'Handful of mixed nuts'
-          ],
-          // Day 2
-          [
-            'Greek yogurt with berries',
-            'Celery sticks with peanut butter',
-            'Hard-boiled egg with salt and pepper'
-          ],
-          // Day 3
-          [
-            'Protein bar (homemade or low-sugar option)',
-            'Cucumber slices with tzatziki dip',
-            'Air-popped popcorn with nutritional yeast'
-          ],
-          // Day 4
-          [
-            'Cherry tomatoes with mozzarella cheese',
-            'Rice cakes with avocado',
-            'Trail mix with dried fruits and seeds'
-          ],
-          // Day 5
-          [
-            'Roasted chickpeas with spices',
-            'Pear slices with ricotta cheese',
-            'Edamame beans with sea salt'
-          ],
-          // Day 6
-          [
-            'Protein smoothie with berries and spinach',
-            'Turkey jerky with no added sugars',
-            'Cottage cheese with pineapple chunks'
-          ],
-          // Day 7
-          [
-            'Kale chips with olive oil and sea salt',
-            'Tuna on whole grain crackers',
-            'Orange slices with a handful of almonds'
-          ]
-        ],
-        'dinner': [
-          // Day 1
-          [
-            'Baked salmon with roasted vegetables',
-            'Grilled lean steak with steamed broccoli',
-            'Stir fry with tofu and mixed vegetables'
-          ],
-          // Day 2
-          [
-            'Grilled chicken breast with quinoa and asparagus',
-            'Baked cod with sweet potato and green beans',
-            'Turkey meatballs with zucchini noodles'
-          ],
-          // Day 3
-          [
-            'Lentil and vegetable curry with brown rice',
-            'Grilled shrimp skewers with mixed vegetables',
-            'Stuffed bell peppers with lean ground beef and quinoa'
-          ],
-          // Day 4
-          [
-            'Baked chicken thighs with roasted root vegetables',
-            'Salmon burger with avocado and mixed greens',
-            'Vegetable lasagna with whole grain noodles'
-          ],
-          // Day 5
-          [
-            'Turkey chili with beans and vegetables',
-            'Baked tilapia with steamed bok choy and quinoa',
-            'Grilled pork tenderloin with roasted Brussels sprouts'
-          ],
-          // Day 6
-          [
-            'Shrimp and vegetable paella with brown rice',
-            'Baked chicken with lemon and herbs, side of green beans',
-            'Beef stir-fry with mixed vegetables and brown rice'
-          ],
-          // Day 7
-          [
-            'Grilled fish tacos with avocado and salsa',
-            'Roasted turkey breast with sweet potatoes and green beans',
-            'Eggplant parmesan with side salad'
-          ]
-        ]
-      };
-        
-      // For each meal type, get the appropriate day's meals
-      mealTypes.forEach(mealType => {
-        const dayIndex = (day - 1) % 7; // Cycle through 7 days of meals
-        
-        // Get day-specific meals for this meal type
-        const dayMealsForType = daySpecificMeals[mealType][dayIndex].map(item => cleanItemText(item));
-        
-        const iconMap = {
-          'breakfast': 'fa-sun',
-          'lunch': 'fa-utensils',
-          'snack': 'fa-apple-alt',
-          'dinner': 'fa-moon'
-        };
-        
-        dayMeals.meals.push({
-          id: `meal-day-${day}-${mealType}`,
-          title: mealType.charAt(0).toUpperCase() + mealType.slice(1),
-          mealType: mealType,
-          items: dayMealsForType,
-          icon: iconMap[mealType]
-        });
-      });
-      
-      mealPlansByDay.push(dayMeals);
-    }
+    // Log each day of workout data to see what might be missing
+    workoutSections.forEach((day, index) => {
+      console.log(`Workout Day ${day.dayNumber} - ${day.workoutType}: ${day.exercises.length} exercises`);
+    });
 
-    if (workoutSections.length === 0) {
-      // Create a default 7-day workout plan instead of just one day
-      const defaultWorkouts = [
-        {
-          id: 'workout-0',
-          dayNumber: 1,
-          mainTitle: 'Cardio',
-          workoutType: 'Cardiovascular Training',
-          exercises: [
-            '30 minutes of walking or light jogging',
-            '10-15 minutes of stretching',
-            'Basic bodyweight exercises like jumping jacks and high knees'
-          ].map(exercise => cleanItemText(exercise)),
-          icon: 'fa-heartbeat'
-        },
-        {
-          id: 'workout-1',
-          dayNumber: 2,
-          mainTitle: 'Upper Body',
-          workoutType: 'Strength Training',
-          exercises: [
-            'Push-ups (3 sets of 10-15 reps)',
-            'Dumbbell rows or resistance band pulls',
-            'Shoulder presses or lateral raises'
-          ].map(exercise => cleanItemText(exercise)),
-          icon: 'fa-dumbbell'
-        },
-        {
-          id: 'workout-2',
-          dayNumber: 3,
-          mainTitle: 'Active Recovery',
-          workoutType: 'Flexibility & Mobility',
-          exercises: [
-            '20-30 minutes of yoga or gentle stretching',
-            'Foam rolling for major muscle groups',
-            'Light walking or swimming'
-          ].map(exercise => cleanItemText(exercise)),
-          icon: 'fa-spa'
-        },
-        {
-          id: 'workout-3',
-          dayNumber: 4,
-          mainTitle: 'Lower Body',
-          workoutType: 'Strength Training',
-          exercises: [
-            'Bodyweight squats (3 sets of 15-20 reps)',
-            'Lunges (forward and side)',
-            'Calf raises and glute bridges'
-          ].map(exercise => cleanItemText(exercise)),
-          icon: 'fa-running'
-        },
-        {
-          id: 'workout-4',
-          dayNumber: 5,
-          mainTitle: 'Cardio & Core',
-          workoutType: 'Endurance Training',
-          exercises: [
-            '25 minutes of interval training (alternate between 1 min high and 2 min low intensity)',
-            'Plank variations (30 seconds each)',
-            'Bicycle crunches and leg raises'
-          ].map(exercise => cleanItemText(exercise)),
-          icon: 'fa-heartbeat'
-        },
-        {
-          id: 'workout-5',
-          dayNumber: 6,
-          mainTitle: 'Full Body',
-          workoutType: 'Circuit Training',
-          exercises: [
-            'Full body circuit (30 seconds each exercise, minimal rest)',
-            'Combination of upper and lower body movements',
-            'Core exercises like mountain climbers and Russian twists'
-          ].map(exercise => cleanItemText(exercise)),
-          icon: 'fa-dumbbell'
-        },
-        {
-          id: 'workout-6',
-          dayNumber: 7,
-          mainTitle: 'Rest Day',
-          workoutType: 'Active Recovery',
-          exercises: [
-            'Light walking or gentle movement',
-            'Full body stretching session',
-            'Self-massage or foam rolling'
-          ].map(exercise => cleanItemText(exercise)),
-          icon: 'fa-bed'
-        }
-      ];
-      
-      // Add all default workout days
-      workoutSections.push(...defaultWorkouts);
-    }
-
-    // Update state with parsed sections
-    setMealSections(mealSections);
+    // Update state with appropriate day counts
     setMealPlansByDay(mealPlansByDay);
     setWorkoutSections(workoutSections);
   };
@@ -1006,17 +960,30 @@ Remember: ALWAYS respond in English regardless of the input language.`;
     // Set the input value to show what's being processed
     setFitnessGoal(currentPopupGoal);
     
-    // Format the user prompt with form data
+    // Get the requested days from form data
     const requestedDays = parseInt(formData.workoutDays) || 5; // Default to 5 days if parsing fails
+    console.log(`Form submission requesting ${requestedDays} days per week`);
+    
+    // Calculate BMI for personalization
+    const heightInMeters = parseFloat(formData.height) / 100;
+    const bmi = parseFloat(formData.currentWeight) / (heightInMeters * heightInMeters);
+    const bmiRounded = Math.round(bmi * 10) / 10;
+    
+    // Calculate weight difference
+    const weightDifference = parseFloat(formData.targetWeight) - parseFloat(formData.currentWeight);
+    const weightGoalType = weightDifference < 0 ? "lose" : (weightDifference > 0 ? "gain" : "maintain");
+    const absWeightDifference = Math.abs(weightDifference);
     
     // Build the prompt dynamically based on filled fields
     let enhancedUserPrompt = `Goal: ${currentPopupGoal} (Please respond in English with both MEAL_PLAN and WORKOUT_PLAN). `;
     
-    // Add required fields
-    enhancedUserPrompt += `I am a ${formData.age} year old ${formData.gender} with a height of ${formData.height}cm. `;
-    enhancedUserPrompt += `My current weight is ${formData.currentWeight}kg and I want to reach ${formData.targetWeight}kg. `;
+    // Add detailed user profile information
+    enhancedUserPrompt += `I am a ${formData.age} year old ${formData.gender} with a height of ${formData.height}cm and a BMI of ${bmiRounded}. `;
+    enhancedUserPrompt += `My current weight is ${formData.currentWeight}kg and I want to ${weightGoalType} ${absWeightDifference}kg to reach ${formData.targetWeight}kg. `;
     enhancedUserPrompt += `I am ${formData.activityLevel} and have ${formData.experienceLevel} experience level. `;
-    enhancedUserPrompt += `I prefer to workout ${formData.workoutDays} days per week. `;
+    
+    // Add explicit day count with redundant wording to ensure the correct number of days
+    enhancedUserPrompt += `I prefer to workout ${formData.workoutDays} days per week. Please provide EXACTLY ${requestedDays} days of meal plan and EXACTLY ${requestedDays} days of workout plan. I need ${requestedDays} days total, not more. `;
     
     // Add optional fields if provided
     if (formData.timeframe) {
@@ -1061,13 +1028,27 @@ Ensure each section follows this format exactly to maintain readability and pars
 Remember: ALWAYS respond in English regardless of the input language.`;
 
       // Combine system prompt with user prompt
-      const combinedPrompt = `${systemPrompt}\n\nUser Query: ${enhancedUserPrompt} (Please provide exactly ${requestedDays} days of workouts)`;
+      const combinedPrompt = `${systemPrompt}\n\nUser Query: ${enhancedUserPrompt}`;
 
       // Add timestamp to force a fresh response each time
       const timestamp = new Date().getTime();
       const forceNewPrompt = `${combinedPrompt}\n\nTimestamp: ${timestamp}`;
 
-      console.log('Sending API request to backend...');
+      console.log('Sending API request to backend with user profile data...');
+      console.log('User profile:', {
+        age: formData.age,
+        gender: formData.gender,
+        height: formData.height,
+        currentWeight: formData.currentWeight,
+        targetWeight: formData.targetWeight,
+        bmi: bmiRounded,
+        weightGoal: weightGoalType,
+        activityLevel: formData.activityLevel,
+        experienceLevel: formData.experienceLevel,
+        workoutDays: formData.workoutDays,
+        healthConditions: formData.healthConditions
+      });
+      
       const response = await fetch('http://127.0.0.1:5000/chat', {
         method: 'POST',
         headers: {
@@ -1289,15 +1270,23 @@ Remember: ALWAYS respond in English regardless of the input language.`;
 
   // Calculate calories for a meal (sum of all items)
   const calculateMealCalories = (items) => {
+    if (!items || items.length === 0) return 0;
     return items.reduce((total, item) => total + estimateCalories(item), 0);
   };
 
   // Calculate total daily calories
   const calculateDailyCalories = (meals) => {
-    return meals.reduce((total, meal) => {
-      const mealCalories = calculateMealCalories(meal.items);
-      return total + mealCalories;
-    }, 0);
+    if (!meals || meals.length === 0) return 0;
+    
+    let totalCalories = 0;
+    
+    meals.forEach(meal => {
+      // Use the meal's calories value if it exists, otherwise calculate from items
+      const mealCalories = meal.calories > 0 ? meal.calories : calculateMealCalories(meal.items);
+      totalCalories += mealCalories;
+    });
+    
+    return totalCalories;
   };
 
   return (
@@ -1372,20 +1361,18 @@ Remember: ALWAYS respond in English regardless of the input language.`;
       )}
 
       {showPlans && (
-        <div
-          className="plans-container"
-          id="plansContainer"
-          ref={plansContainerRef}
-        >
-          <div className="plan-section">
+        <div className="main-plans-container">
+          <div className="plans-container" id="plansContainer" ref={plansContainerRef}>
+          <div className="plans-grid">
+            <div className="plan-section meal-section">
             <div className="plan-header">
               <i className="fas fa-utensils plan-icon"></i>
               <h2>Meal Plan</h2>
             </div>
             <div className="accordion" id="mealAccordion" ref={mealAccordionRef}>
-              {mealPlansByDay.map((dayPlan, index) => (
+                {mealPlansByDay.map((dayPlan) => (
                 <div
-                  key={dayPlan.id}
+                    key={`day-${dayPlan.dayNumber}`}
                   className="accordion-item"
                 >
                   <div
@@ -1420,25 +1407,25 @@ Remember: ALWAYS respond in English regardless of the input language.`;
                     }}
                   >
                     <div className="nested-accordion">
-                      {dayPlan.meals.map((meal, mealIndex) => (
-                        <div key={meal.id} className="nested-accordion-item">
+                        {dayPlan.meals.map((meal) => (
+                          <div key={`${dayPlan.dayNumber}-${meal.type}`} className="nested-accordion-item">
                           <div 
                             className="nested-accordion-header"
-                            data-meal-type={meal.mealType}
-                            onClick={() => toggleAccordion('meal-sub', `${dayPlan.dayNumber}-${meal.mealType}`)}
+                              data-meal-type={meal.type.toLowerCase()}
+                              onClick={() => toggleAccordion('meal-sub', `${dayPlan.dayNumber}-${meal.type}`)}
                           >
                             <div className="meal-header-content">
-                              <i className={`fas ${meal.icon} nested-accordion-icon`}></i>
-                              <span style={{ fontSize: '1rem', fontWeight: '500' }}>{meal.title}</span>
+                                <i className={`fas ${getMealIcon(meal.type)} nested-accordion-icon`}></i>
+                                <span style={{ fontSize: '1rem', fontWeight: '500' }}>{meal.type}</span>
                             </div>
                             <div className="meal-header-right">
                               <span className="calories-info">
-                                {calculateMealCalories(meal.items)} cal
+                                  {meal.calories > 0 ? meal.calories : calculateMealCalories(meal.items)} cal
                               </span>
                               <i
                                 className="fas fa-chevron-right nested-accordion-arrow"
                                 style={{
-                                  transform: openMealSubAccordion === `${dayPlan.dayNumber}-${meal.mealType}` ? 'rotate(90deg)' : 'rotate(0deg)'
+                                    transform: openMealSubAccordion === `${dayPlan.dayNumber}-${meal.type}` ? 'rotate(90deg)' : 'rotate(0deg)'
                                 }}
                               ></i>
                             </div>
@@ -1446,14 +1433,13 @@ Remember: ALWAYS respond in English regardless of the input language.`;
                           <div
                             className="nested-accordion-content"
                             style={{
-                              display: openMealSubAccordion === `${dayPlan.dayNumber}-${meal.mealType}` ? 'block' : 'none',
-
-                              animation: openMealSubAccordion === `${dayPlan.dayNumber}-${meal.mealType}` ? 'slideDown 0.3s ease forwards' : 'none'
-                            }}
-                          >
-                            <ul className="numbered-list" >
-                              {meal.items.map((item, i) => (
-                                <li key={i}>{item}</li>
+                                display: openMealSubAccordion === `${dayPlan.dayNumber}-${meal.type}` ? 'block' : 'none',
+                                animation: openMealSubAccordion === `${dayPlan.dayNumber}-${meal.type}` ? 'slideDown 0.3s ease forwards' : 'none'
+                              }}
+                            >
+                              <ul className="numbered-list">
+                                {meal.items.map((item, index) => (
+                                  <li key={`${dayPlan.dayNumber}-${meal.type}-item-${index}`}>{item}</li>
                               ))}
                             </ul>
                           </div>
@@ -1466,15 +1452,15 @@ Remember: ALWAYS respond in English regardless of the input language.`;
             </div>
           </div>
 
-          <div className="plan-section">
+            <div className="plan-section workout-section">
             <div className="plan-header">
               <i className="fas fa-dumbbell plan-icon"></i>
               <h2>Workout Plan</h2>
             </div>
             <div className="accordion" id="workoutAccordion" ref={workoutAccordionRef}>
-              {workoutSections.map((section, index) => (
+                {workoutSections.map((section) => (
                 <div
-                  key={section.id}
+                    key={`workout-day-${section.dayNumber}`}
                   className="accordion-item"
                 >
                   <div
@@ -1483,12 +1469,9 @@ Remember: ALWAYS respond in English regardless of the input language.`;
                     onClick={() => toggleAccordion('workout', `day${section.dayNumber}`)}
                   >
                     <div style={{ display: 'flex', alignItems: 'center' }}>
-                      <i className={`fas ${section.icon} accordion-icon`}></i>
+                        <i className={`fas ${getWorkoutIcon(section.workoutType)} accordion-icon`}></i>
                       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
-                        <span style={{ fontSize: '1.1rem', fontWeight: '600' }}>Day {section.dayNumber}: {section.mainTitle}</span>
-                        <span style={{ fontSize: '0.9rem', color: '#7f8c8d', marginTop: '4px' }}>
-                          {section.workoutType}
-                        </span>
+                          <span style={{ fontSize: '1.1rem', fontWeight: '600' }}>Day {section.dayNumber}: {section.workoutType}</span>
                       </div>
                     </div>
                     <i
@@ -1508,15 +1491,17 @@ Remember: ALWAYS respond in English regardless of the input language.`;
                     }}
                   >
                     <ul className="numbered-list">
-                      {section.exercises.map((exercise, i) => (
-                        <li key={i}>{exercise}</li>
+                        {section.exercises.map((exercise, index) => (
+                          <li key={`day${section.dayNumber}-exercise-${index}`}>{exercise.description}</li>
                       ))}
                     </ul>
                   </div>
                 </div>
               ))}
+              </div>
             </div>
           </div>
+        </div>
         </div>
       )}
 
