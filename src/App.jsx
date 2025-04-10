@@ -460,8 +460,8 @@ Remember: ALWAYS respond in English regardless of the input language.`;
     let cleanedResponse = formatResponse(response);
     
     console.log('Cleaned response for parsing:', cleanedResponse);
-    
-    // Split into meal plan and workout plan sections 
+
+    // Split into meal plan and workout plan sections
     // Use a more robust regex that accounts for various formats
     const mealPlanMatch = cleanedResponse.match(/MEAL_PLAN:([\s\S]*?)(?=WORKOUT_PLAN:|$)/i);
     
@@ -490,7 +490,7 @@ Remember: ALWAYS respond in English regardless of the input language.`;
       console.error('Response missing required meal plan section');
       return;
     }
-    
+
     const mealPlanRaw = mealPlanMatch[1].trim();
     const workoutPlanRaw = workoutPlanMatch ? workoutPlanMatch[1].trim() : '';
     
@@ -616,10 +616,12 @@ Remember: ALWAYS respond in English regardless of the input language.`;
       }
 
       // Check for meal type with calories - handle multiple formats
-      const mealTypeMatch = line.match(/(Breakfast|Lunch|Snack|Dinner)\s*\((\d+)\s*calories\):/i);
+      const mealTypeMatch = line.match(/(Breakfast|Lunch|Snack|Dinner)\s*\(?(\d+)?\s*calories?\)?:/i);
       if (mealTypeMatch) {
         currentMealType = mealTypeMatch[1];
-        const calories = parseInt(mealTypeMatch[2]);
+        const calories = mealTypeMatch[2] ? parseInt(mealTypeMatch[2]) : 0;
+        
+        console.log(`Found meal type: ${currentMealType}, calories: ${calories}`);
         
         // Update calories for current meal type
         if (currentDay) {
@@ -654,7 +656,7 @@ Remember: ALWAYS respond in English regardless of the input language.`;
     let currentWorkoutDay = null;
     let currentWorkoutType = null;
     let currentExercises = [];
-    
+
     // Make sure we use the same number of days for workouts as detected in meal plan
     // unless workout plan explicitly has a different number of days
     let workoutDayCount = numDays;
@@ -690,8 +692,8 @@ Remember: ALWAYS respond in English regardless of the input language.`;
     }
 
     if (workoutPlanRaw) {
-      const workoutPlanLines = workoutPlanRaw.split('\n').map(line => line.trim()).filter(Boolean);
-      let isProcessingWorkout = false;
+    const workoutPlanLines = workoutPlanRaw.split('\n').map(line => line.trim()).filter(Boolean);
+    let isProcessingWorkout = false;
       let timelineFound = false;
       let expectedResultsFound = false;
 
@@ -707,9 +709,9 @@ Remember: ALWAYS respond in English regardless of the input language.`;
           if (timelineMatch) {
             setTimeline(parseInt(timelineMatch[1]));
           }
-          return;
-        }
-        
+        return;
+      }
+
         if (line.includes('Weekly Schedule:')) {
           const scheduleMatch = line.match(/Weekly Schedule:\s*(\d+)\s*days?/i);
           if (scheduleMatch) {
@@ -733,8 +735,8 @@ Remember: ALWAYS respond in English regardless of the input language.`;
           dayMatch = line.match(/Day\s*(\d+)\s*[-:]?\s*(.*)/i);
         }
         
-        if (dayMatch) {
-          currentWorkoutDay = parseInt(dayMatch[1]);
+      if (dayMatch) {
+        currentWorkoutDay = parseInt(dayMatch[1]);
           currentWorkoutType = dayMatch[2] ? dayMatch[2].trim() : 'Workout';
           
           // Clean up the workout type if it contains colons
@@ -742,41 +744,41 @@ Remember: ALWAYS respond in English regardless of the input language.`;
             currentWorkoutType = currentWorkoutType.replace(/:/g, '').trim();
           }
           
-          currentExercises = [];
-          isProcessingWorkout = true;
+        currentExercises = [];
+        isProcessingWorkout = true;
           
           console.log(`Found workout day: ${currentWorkoutDay}, type: ${currentWorkoutType}`);
-          
-          // Update workout type for this day
-          const dayIndex = currentWorkoutDay - 1;
-          if (dayIndex >= 0 && dayIndex < workoutSections.length) {
-            workoutSections[dayIndex].workoutType = currentWorkoutType;
+        
+        // Update workout type for this day
+        const dayIndex = currentWorkoutDay - 1;
+        if (dayIndex >= 0 && dayIndex < workoutSections.length) {
+          workoutSections[dayIndex].workoutType = currentWorkoutType;
           } else {
             console.warn(`Workout day ${currentWorkoutDay} is out of range (max: ${workoutSections.length})`);
-          }
-          return;
         }
+        return;
+      }
 
         // If we're processing a workout and line starts with a number or bullet, it's an exercise
         // Use a more flexible pattern to detect exercise items
         if (isProcessingWorkout && (/^(\d+\.|[\-•●])/.test(line) || /^\d+\s*[.)]/.test(line))) {
           const exercise = line.replace(/^(\d+\s*[.)]|[\-•●])\s*/, '').trim();
-          if (currentWorkoutDay) {
-            const dayIndex = currentWorkoutDay - 1;
-            if (dayIndex >= 0 && dayIndex < workoutSections.length) {
+        if (currentWorkoutDay) {
+          const dayIndex = currentWorkoutDay - 1;
+          if (dayIndex >= 0 && dayIndex < workoutSections.length) {
               console.log(`Adding exercise to day ${currentWorkoutDay}: ${exercise}`);
-              workoutSections[dayIndex].exercises.push({
-                number: workoutSections[dayIndex].exercises.length + 1,
-                description: exercise
-              });
+            workoutSections[dayIndex].exercises.push({
+              number: workoutSections[dayIndex].exercises.length + 1,
+              description: exercise
+            });
             } else {
               console.warn(`Cannot add exercise - day ${currentWorkoutDay} out of range (max: ${workoutSections.length})`);
-            }
+          }
           } else {
             console.warn(`Cannot add exercise - no current workout day set`);
-          }
         }
-      });
+      }
+    });
 
       // If no day sections were found but there are exercise-like entries
       // Try to extract exercises directly without day headers
@@ -824,7 +826,7 @@ Remember: ALWAYS respond in English regardless of the input language.`;
     // Log the processed data for debugging
     console.log('Processed meal plans:', mealPlansByDay);
     console.log('Processed workouts:', workoutSections);
-    
+
     // Log each day of workout data to see what might be missing
     workoutSections.forEach((day, index) => {
       console.log(`Workout Day ${day.dayNumber} - ${day.workoutType}: ${day.exercises.length} exercises`);
@@ -1271,7 +1273,15 @@ Remember: ALWAYS respond in English regardless of the input language.`;
   // Calculate calories for a meal (sum of all items)
   const calculateMealCalories = (items) => {
     if (!items || items.length === 0) return 0;
-    return items.reduce((total, item) => total + estimateCalories(item), 0);
+    let totalCals = 0;
+    
+    items.forEach(item => {
+      const itemCals = estimateCalories(item);
+      console.log(`   - Item: "${item.substring(0, 30)}...", Est. calories: ${itemCals}`);
+      totalCals += itemCals;
+    });
+    
+    return totalCals;
   };
 
   // Calculate total daily calories
@@ -1284,6 +1294,9 @@ Remember: ALWAYS respond in English regardless of the input language.`;
       // Use the meal's calories value if it exists, otherwise calculate from items
       const mealCalories = meal.calories > 0 ? meal.calories : calculateMealCalories(meal.items);
       totalCalories += mealCalories;
+      
+      // Add console log to debug each meal's calories
+      console.log(`Meal: ${meal.type}, Calories: ${mealCalories}, Items: ${meal.items.length}`);
     });
     
     return totalCalories;
@@ -1291,9 +1304,9 @@ Remember: ALWAYS respond in English regardless of the input language.`;
 
   return (
     <div className="ai-coach-container">
+        
       <h1>
-        <i className="fas fa-heartbeat title-icon"></i>
-        Ask Your AI Coach
+        Ask Your Elefit AI Coach
       </h1>
 
       <div className="input-section">
@@ -1306,8 +1319,16 @@ Remember: ALWAYS respond in English regardless of the input language.`;
             onChange={(e) => {
               setFitnessGoal(e.target.value);
               // Auto-adjust height based on content, with a minimum height
+              // First reset to default height to properly collapse when text is deleted
               e.target.style.height = '42px';
-              e.target.style.height = `${Math.max(e.target.scrollHeight, 42)}px`;
+              const scrollHeight = e.target.scrollHeight;
+              
+              // Apply the new height with a small buffer to prevent flickering
+              if (e.target.value === '') {
+                e.target.style.height = '42px'; // Reset to default when empty
+              } else {
+                e.target.style.height = `${Math.max(scrollHeight, 42)}px`;
+              }
             }}
             onKeyPress={(e) => {
               if (e.key === 'Enter' && !e.shiftKey) {
@@ -1361,8 +1382,7 @@ Remember: ALWAYS respond in English regardless of the input language.`;
       )}
 
       {showPlans && (
-        <div className="main-plans-container">
-          <div className="plans-container" id="plansContainer" ref={plansContainerRef}>
+        <div className="plans-container" id="plansContainer" ref={plansContainerRef}>
           <div className="plans-grid">
             <div className="plan-section meal-section">
             <div className="plan-header">
@@ -1387,7 +1407,7 @@ Remember: ALWAYS respond in English regardless of the input language.`;
                     <div className="day-header-right">
                       <div className="total-calories">
                         <i className="fas fa-fire-alt"></i>
-                        {Math.round(calculateDailyCalories(dayPlan.meals))} cal/day
+                        {Math.floor(calculateDailyCalories(dayPlan.meals))} cal/day
                       </div>
                       <i
                         className="fas fa-chevron-right accordion-arrow"
@@ -1420,7 +1440,7 @@ Remember: ALWAYS respond in English regardless of the input language.`;
                             </div>
                             <div className="meal-header-right">
                               <span className="calories-info">
-                                  {meal.calories > 0 ? meal.calories : calculateMealCalories(meal.items)} cal
+                                  {meal.calories > 0 ? meal.calories : Math.floor(calculateMealCalories(meal.items))} cal
                               </span>
                               <i
                                 className="fas fa-chevron-right nested-accordion-arrow"
@@ -1468,18 +1488,18 @@ Remember: ALWAYS respond in English regardless of the input language.`;
                     data-day={`day${section.dayNumber}`}
                     onClick={() => toggleAccordion('workout', `day${section.dayNumber}`)}
                   >
-                    <div style={{ display: 'flex', alignItems: 'center' }}>
+                    <div className="day-header-content">
                         <i className={`fas ${getWorkoutIcon(section.workoutType)} accordion-icon`}></i>
-                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
                           <span style={{ fontSize: '1.1rem', fontWeight: '600' }}>Day {section.dayNumber}: {section.workoutType}</span>
                       </div>
-                    </div>
+                    <div className="day-header-right">
                     <i
                       className="fas fa-chevron-right accordion-arrow"
                       style={{
                         transform: openWorkoutAccordion === `day${section.dayNumber}` ? 'rotate(90deg)' : 'rotate(0deg)'
                       }}
                     ></i>
+                    </div>
                   </div>
                   <div
                     className="accordion-content"
@@ -1501,7 +1521,6 @@ Remember: ALWAYS respond in English regardless of the input language.`;
               </div>
             </div>
           </div>
-        </div>
         </div>
       )}
 
