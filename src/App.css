@@ -483,7 +483,7 @@ h1::after {
   align-items: center;
   font-family: 'Poppins', sans-serif;
   gap: 8px;
-  padding: 8px 15px;
+  padding: 8px 18px 8px 15px; /* Increased right padding from 15px to 18px */
   border-radius: 50px;
   background-color: #111;
   border: 1px solid #333;
@@ -499,6 +499,20 @@ h1::after {
   opacity: 0;
   position: relative;
   overflow: hidden;
+  min-width: max-content; /* Ensure content doesn't get cut off */
+}
+
+/* Improve padding for specific options with longer text */
+.suggestion-chip[data-goal="Improve Endurance"] {
+  padding-right: 22px; /* Extra padding for "Improve Endurance" */
+}
+
+.suggestion-chip[data-goal="Athletic Performance"] {
+  padding-right: 22px; /* Extra padding for "Athletic Performance" */
+}
+
+.suggestion-chip[data-goal="Increase Flexibility"] {
+  padding-right: 22px; /* Extra padding for "Increase Flexibility" */
 }
 
 /* Add shadow effects for each goal type */
@@ -510,20 +524,12 @@ h1::after {
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.05), inset 0 0 8px rgba(0, 0, 0, 0.6), 0 0 10px rgba(52, 152, 219, 0.2);
 }
 
-.suggestion-chip[data-goal="Improve Endurance"] {
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.05), inset 0 0 8px rgba(0, 0, 0, 0.6), 0 0 10px rgba(46, 204, 113, 0.2);
-}
-
 .suggestion-chip[data-goal="Get Stronger"] {
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.05), inset 0 0 8px rgba(0, 0, 0, 0.6), 0 0 10px rgba(241, 196, 15, 0.2);
 }
 
 .suggestion-chip[data-goal="Increase Flexibility"] {
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.05), inset 0 0 8px rgba(0, 0, 0, 0.6), 0 0 10px rgba(155, 89, 182, 0.2);
-}
-
-.suggestion-chip[data-goal="Athletic Performance"] {
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.05), inset 0 0 8px rgba(0, 0, 0, 0.6), 0 0 10px rgba(26, 188, 156, 0.2);
 }
 
 /* Enhanced hover effects */
@@ -2288,11 +2294,13 @@ label[for] span.required-asterisk {
   font-family: 'Montserrat', sans-serif;
   font-weight: 500;
   letter-spacing: 0.5px;
+  
 }
 
 /* Custom colors for each suggestion chip icon */
 .suggestion-chip[data-goal="Lose Weight"] i {
   color: #e74c3c;
+ 
   filter: drop-shadow(0 2px 4px rgba(231, 76, 60, 0.4));
 }
 
@@ -2456,5 +2464,74 @@ label[for] span.required-asterisk {
     font-size: 1.8rem;
     letter-spacing: -0.3px;
     min-height: 2.2rem;
+  }
+}
+
+/* Desktop layout for suggestion chips */
+@media (min-width: 901px) {
+  .suggestion-chips {
+    display: grid;
+    grid-template-rows: auto auto;
+    grid-template-columns: repeat(4, auto);
+    row-gap: 1.2rem;
+    column-gap: 1.2rem;
+    max-width: 900px;
+    justify-content: center;
+  }
+  
+  .suggestion-chip:nth-child(5), 
+  .suggestion-chip:nth-child(6) {
+    grid-row: 2;
+  }
+  
+  .suggestion-chip:nth-child(5) {
+    grid-column: 2;
+  }
+  
+  .suggestion-chip:nth-child(6) {
+    grid-column: 3;
+  }
+}
+
+/* Tablet and medium-sized screens - staggered layout */
+@media (min-width: 481px) and (max-width: 900px) {
+  .suggestion-chips {
+    display: grid;
+    grid-template-rows: auto auto auto;
+    grid-template-columns: repeat(3, auto);
+    row-gap: 1rem;
+    column-gap: 1rem;
+    max-width: 650px;
+    justify-content: center;
+  }
+  
+  /* First row: 3 options */
+  .suggestion-chip:nth-child(1),
+  .suggestion-chip:nth-child(2),
+  .suggestion-chip:nth-child(3) {
+    grid-row: 1;
+  }
+  
+  /* Second row: 2 options, centered */
+  .suggestion-chip:nth-child(4),
+  .suggestion-chip:nth-child(5) {
+    grid-row: 2;
+  }
+  
+  .suggestion-chip:nth-child(4) {
+    grid-column: 1 / span 1;
+    justify-self: end;
+  }
+  
+  .suggestion-chip:nth-child(5) {
+    grid-column: 2 / span 1;
+    justify-self: start;
+  }
+  
+  /* Third row: 1 option, centered */
+  .suggestion-chip:nth-child(6) {
+    grid-row: 3;
+    grid-column: 2;
+    justify-self: center;
   }
 }
