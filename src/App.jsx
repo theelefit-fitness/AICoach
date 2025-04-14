@@ -42,10 +42,10 @@ const AIFitnessCoach = () => {
   const suggestions = [
     { text: "Lose Weight", icon: "fa-fire" },
     { text: "Build Muscle", icon: "fa-dumbbell" },
-    { text: "Improve Endurance", icon: "fa-running" },
+    { text: "Get Fit", icon: "fa-running" },
     { text: "Get Stronger", icon: "fa-mountain" },
-    { text: "Increase Flexibility", icon: "fa-stopwatch" },
-    { text: "Athletic Performance", icon: "fa-chart-line" }
+    { text: "Stay Flexible", icon: "fa-stopwatch" },
+    { text: "Be Athletic", icon: "fa-chart-line" }
   ];
 
   const goalData = {
@@ -59,7 +59,7 @@ const AIFitnessCoach = () => {
       color: "#3498db",
       description: "Combine strength training with proper nutrition to increase muscle mass."
     },
-    "Improve Endurance": {
+    "Get Fit": {
       icon: "fa-running",
       color: "#2ecc71",
       description: "Enhance your cardiovascular fitness through consistent aerobic exercises."
@@ -69,12 +69,12 @@ const AIFitnessCoach = () => {
       color: "#f1c40f",
       description: "Focus on progressive overload and compound movements for overall strength."
     },
-    "Increase Flexibility": {
+    "Stay Flexible": {
       icon: "fa-stopwatch",
       color: "#9b59b6",
       description: "Incorporate stretching and mobility exercises for better range of motion."
     },
-    "Athletic Performance": {
+    "Be Athletic": {
       icon: "fa-chart-line",
       color: "#1abc9c",
       description: "Enhance your overall athletic abilities through targeted training programs."
@@ -396,7 +396,7 @@ Remember: ALWAYS respond in English regardless of the input language.`;
         physicalAttributes
       });
 
-      const response = await fetch('http://127.0.0.1:5000/chat', {
+      const response = await fetch('https://ask-our-coach.onrender.com/chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -776,9 +776,9 @@ Remember: ALWAYS respond in English regardless of the input language.`;
           }
           } else {
             console.warn(`Cannot add exercise - no current workout day set`);
+          }
         }
-      }
-    });
+      });
 
       // If no day sections were found but there are exercise-like entries
       // Try to extract exercises directly without day headers
@@ -1051,7 +1051,7 @@ Remember: ALWAYS respond in English regardless of the input language.`;
         healthConditions: formData.healthConditions
       });
       
-      const response = await fetch('http://127.0.0.1:5000/chat', {
+      const response = await fetch('https://ask-our-coach.onrender.com/chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -1305,8 +1305,8 @@ Remember: ALWAYS respond in English regardless of the input language.`;
   return (
     <div className="ai-coach-container">
         
-      <h1>
-        Ask Your Elefit AI Coach
+      <h1 className="ai-coach-title">
+        Ask our EleFit AI Coach
       </h1>
 
       <div className="input-section">
@@ -1402,7 +1402,7 @@ Remember: ALWAYS respond in English regardless of the input language.`;
                   >
                     <div className="day-header-content">
                       <i className="fas fa-calendar-day accordion-icon"></i>
-                      <span style={{ fontSize: '1.1rem', fontWeight: '600' }}>Day {dayPlan.dayNumber}</span>
+                      <span style={{fontSize: '18px', fontWeight: '600' }}>Day {dayPlan.dayNumber}</span>
                     </div>
                     <div className="day-header-right">
                       <div className="total-calories">
@@ -1436,7 +1436,7 @@ Remember: ALWAYS respond in English regardless of the input language.`;
                           >
                             <div className="meal-header-content">
                                 <i className={`fas ${getMealIcon(meal.type)} nested-accordion-icon`}></i>
-                                <span style={{ fontSize: '1rem', fontWeight: '500' }}>{meal.type}</span>
+                                <span style={{ fontSize: '16px', fontWeight: '500' }}>{meal.type}</span>
                             </div>
                             <div className="meal-header-right">
                               <span className="calories-info">
@@ -1457,11 +1457,11 @@ Remember: ALWAYS respond in English regardless of the input language.`;
                                 animation: openMealSubAccordion === `${dayPlan.dayNumber}-${meal.type}` ? 'slideDown 0.3s ease forwards' : 'none'
                               }}
                             >
-                              <ul className="numbered-list">
+                              <ol className="numbered-list" start="1">
                                 {meal.items.map((item, index) => (
-                                  <li key={`${dayPlan.dayNumber}-${meal.type}-item-${index}`}>{item}</li>
+                                  <li className="ai-coach-numbered-item" key={`${dayPlan.dayNumber}-${meal.type}-item-${index}`}>{item}</li>
                               ))}
-                            </ul>
+                            </ol>
                           </div>
                         </div>
                       ))}
@@ -1490,7 +1490,7 @@ Remember: ALWAYS respond in English regardless of the input language.`;
                   >
                     <div className="day-header-content">
                         <i className={`fas ${getWorkoutIcon(section.workoutType)} accordion-icon`}></i>
-                          <span style={{ fontSize: '1.1rem', fontWeight: '600' }}>Day {section.dayNumber}: {section.workoutType}</span>
+                          <span style={{ fontSize: '18px', fontWeight: '600' }}>Day {section.dayNumber}: {section.workoutType}</span>
                       </div>
                     <div className="day-header-right">
                     <i
@@ -1510,11 +1510,11 @@ Remember: ALWAYS respond in English regardless of the input language.`;
                       boxSizing: 'border-box'
                     }}
                   >
-                    <ul className="numbered-list">
+                    <ol className="numbered-list" start="1">
                         {section.exercises.map((exercise, index) => (
-                          <li key={`day${section.dayNumber}-exercise-${index}`}>{exercise.description}</li>
+                          <li className="ai-coach-numbered-item" key={`day${section.dayNumber}-exercise-${index}`}>{exercise.description}</li>
                       ))}
-                    </ul>
+                    </ol>
                   </div>
                 </div>
               ))}
@@ -1738,7 +1738,7 @@ Remember: ALWAYS respond in English regardless of the input language.`;
 function App() {
   return (
     <>
-     <div>
+     <div className="main-container">
       <AIFitnessCoach />
      </div>
     </>

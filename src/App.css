@@ -1,15 +1,12 @@
-/* Add Google Fonts import at the top */
-@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&family=Montserrat:wght@400;500;600;700&display=swap');
-
 /* Fix background decorative elements */
 .ai-coach-container {
   display: flex;
   flex-direction: column;
-  padding: 2rem 1rem;
+  padding: 32px 16px;
   min-height: 100vh;
   align-items: center;
-  width: 100%;
-  max-width: 100%;
+  width: 100% !important;
+  max-width: 100% !important;
   box-sizing: border-box;
   position: relative;
   background-color: #0f172a;
@@ -33,18 +30,19 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   overflow-x: hidden;
+  width: 100% !important;
   line-height: 1.6;
 }
 
 /* Container styles */
-.ai-coach-container {
+.main-container .ai-coach-container {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
-  width: 100%;
+  width: 100% !important;
   max-width: 1200px;
   margin: 0 auto;
-  padding: 2rem;
+  padding: 32px;
   box-sizing: border-box;
   position: relative;
   z-index: 1;
@@ -55,16 +53,16 @@ body {
 }
 
 /* Beautiful heading style with animation */
-h1 {
+.ai-coach-title {
   position: relative;
   z-index: 2;
   background: linear-gradient(to right, #7c3aed, #8b5cf6, #d946ef);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
-  margin-bottom: 1.5rem;
+  margin-bottom: 24px;
   text-align: center;
-  font-size: 3rem;
+  font-size: 50px !important;
   font-weight: 700;
   text-shadow: none;
   font-family: 'Montserrat', sans-serif;
@@ -72,7 +70,7 @@ h1 {
   /* Remove font size animation that causes layout shifting */
   animation: floatingTitle 4s ease-in-out infinite;
   /* Create a stable height to prevent layout shifts */
-  min-height: 3.2rem;
+  min-height: 51.2px;
   transform-style: preserve-3d;
   perspective: 1000px;
 }
@@ -96,11 +94,11 @@ h1 {
 }
 
 /* Improved expanding underline animation that doesn't shift layout */
-h1::after {
-  content: "";
-  position: absolute;
+.ai-coach-title::after {
+  content: "" !important;
+  position: absolute !important;
   bottom: -8px;
-  left: 50%;
+  left: 50% !important;
   transform: translateX(-50%);
   width: 0%;
   height: 3px;
@@ -128,7 +126,7 @@ h1::after {
 }
 
 .title-icon {
-  font-size: 3rem;
+  font-size: 48px;
   color: #ec4899;
   filter: drop-shadow(0 4px 12px rgba(236, 72, 153, 0.5));
 }
@@ -137,10 +135,10 @@ h1::after {
 .input-section {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: 16px;
   justify-content: center;
-  margin-bottom: 1.5rem;
-  padding: 1.8rem;
+  margin-bottom: 24px;
+  padding: 28.8px;
   transform-style: preserve-3d;
   perspective: 1000px;
   position: relative;
@@ -149,7 +147,6 @@ h1::after {
   max-width: 800px;
   margin-left: auto;
   margin-right: auto;
-  
   border-radius: 16px;
   box-shadow: none;
   border: none;
@@ -172,28 +169,28 @@ h1::after {
 /* Adjust input container for textarea */
 .input-container {
   display: flex;
-  gap: 1.5rem;
+  gap: 24px;
   justify-content: center;
   width: 100%;
-  margin-bottom: 0.5rem;
+  margin-bottom: 8px;
   align-items: center;
   flex-wrap: wrap;
 }
 
 /* Enhanced input field styles - better single line handling */
 .goal-input {
-  padding: 0.8rem 1.2rem;
+  padding: 12.8px 19.2px;
   width: 45%;
   min-width: 200px;
   max-width: 450px;
   border: 2px solid rgba(139, 92, 246, 0.4);
   border-radius: 14px;
-  font-size: 1rem;
+  font-size: 16px;
   transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
   background: rgba(124, 58, 237, 0.1);
   box-shadow: 0 4px 15px rgba(139, 92, 246, 0.2), 
               inset 0 2px 5px rgba(139, 92, 246, 0.1);
-  color: #8b5cf6!important;
+  color: #8b5cf6 !important;
   font-weight: 400;
   resize: none;
   overflow: hidden;
@@ -246,7 +243,7 @@ h1::after {
   color: rgba(139, 92, 246, 0.8); /* Changed from rgba(224, 214, 255, 0.7) to a more visible violet with higher opacity */
   transition: opacity 0.3s ease, transform 0.3s ease;
   line-height: 1.2;
-  font-size: 0.95rem;
+  font-size: 15.2px;
 }
 
 .goal-input:focus::placeholder {
@@ -263,11 +260,11 @@ h1::after {
 
 /* Vibrant button styles */
 .recommend-button {
-  padding: 0.9rem 1.8rem;
+  padding: 14.4px 28.8px;
   background: linear-gradient(45deg, #6366f1, #8b5cf6, #ec4899);
   background-size: 200% 200%;
   animation: gradientMove 6s ease infinite;
-  font-size: 0.9rem;
+  font-size: 14.4px;
   border-radius: 12px;
   color: white;
   border: none;
@@ -278,6 +275,7 @@ h1::after {
   box-shadow: 0 4px 15px rgba(139, 92, 246, 0.5);
   font-weight: 500;
   letter-spacing: 0.5px;
+  font-size: 14.4px !important;
   min-width: 180px;
   max-width: 100%;
   flex-shrink: 0;
@@ -312,9 +310,9 @@ h1::after {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.8rem;
-  padding: 1.2rem;
-  margin-bottom: 1rem;
+  gap: 12.8px;
+  padding: 19.2px;
+  margin-bottom: 16px;
   text-align: center;
   background: transparent;
   border-radius: 12px;
@@ -325,7 +323,7 @@ h1::after {
 }
 
 .plan-icon {
-  font-size: 2.5rem;
+  font-size: 40px;
   color: #8b5cf6;
   text-shadow: 0 2px 10px rgba(139, 92, 246, 0.6);
   filter: drop-shadow(0 4px 6px rgba(139, 92, 246, 0.4));
@@ -334,7 +332,7 @@ h1::after {
 .plan-header h2 {
   margin: 0;
   color: #f8fafc;
-  font-size: 1.75rem;
+  font-size: 28px;
   font-weight: 600;
   text-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
   background: linear-gradient(to right, #6366f1, #8b5cf6, #ec4899);
@@ -353,7 +351,7 @@ h1::after {
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
   cursor: pointer;
   transition: all 0.3s ease;
-  margin-bottom: 1rem;
+  margin-bottom: 16px;
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
   border: 1px solid rgba(99, 102, 241, 0.2);
@@ -374,12 +372,12 @@ h1::after {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 1.2rem 1.4rem;
+  padding: 19.2px 22.4px;
   background: linear-gradient(135deg, #6366f1, #8b5cf6, #ec4899);
   background-size: 200% 200%;
   animation: gradientMove 8s ease infinite;
   font-weight: 600;
-  font-size: 1.1rem;
+  font-size: 17.6px;
   color: white;
   border-radius: 12px 12px 0 0;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
@@ -392,8 +390,8 @@ h1::after {
 }
 
 .accordion-icon {
-  font-size: 1.5rem;
-  margin-right: 1rem;
+  font-size: 24px;
+  margin-right: 16px;
   color: white;
   min-width: 30px;
   text-align: center;
@@ -405,7 +403,7 @@ h1::after {
   color: white;
   opacity: 0.9;
   transition: transform 0.3s ease;
-  font-size: 1.2rem;
+  font-size: 19.2px;
   filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.2));
 }
 
@@ -414,56 +412,56 @@ h1::after {
   background: rgba(15, 23, 42, 0.6);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
-  padding: 1.2rem;
+  padding: 19.2px;
   width: 100%;
   box-sizing: border-box;
 }
 
-/* Enhanced list styles with neon highlights */
-.accordion ol.numbered-list {
-  list-style: decimal;
-  padding: 1rem 0 0 2rem;
+/* Simplified numbered list with automatic counters */
+ol.numbered-list {
+  counter-reset: listCounter;
+  list-style: none;
+  padding: 8px 0 0 0;
   margin: 0;
-  display: grid;
-  gap: 0.8rem;
-  width: 100%;
-  box-sizing: border-box;
-  counter-reset: item;
 }
 
-.accordion ol.numbered-list li {
+ol.numbered-list li.ai-coach-numbered-item {
   position: relative;
-  list-style-position: outside;
-  padding: 1rem 1.2rem;
+  padding: 16px 19.2px 16px 56px;
+  margin-bottom: 10px;
   display: flex;
   align-items: center;
-  counter-increment: item;
   background: rgba(30, 41, 59, 0.8);
   border-radius: 10px;
   border: 1px solid rgba(255, 255, 255, 0.1);
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-  font-size: 1rem;
+  font-size: 16px;
   color: #f8fafc;
   transition: all 0.2s ease;
-  padding: 12px 16px;
-  margin-bottom: 10px;
   font-family: 'Poppins', sans-serif;
   font-weight: 400;
   letter-spacing: 0.2px;
   line-height: 1.5;
+  counter-increment: listCounter;
 }
 
-.accordion ol.numbered-list li::before {
-  content: counter(item) ".";
+ol.numbered-list li.ai-coach-numbered-item::before {
+  content: counter(listCounter);
   position: absolute;
-  left: -1.5rem;
+  left: 19.2px;
   color: #8b5cf6;
   font-weight: bold;
   transition: all 0.2s ease;
   text-shadow: 0 0 5px rgba(139, 92, 246, 0.5);
+  font-size: 16px;
 }
 
-.accordion li:hover {
+/* Reset previous counter styles */
+.numbered-list .ai-coach-numbered-item::before {
+  content: none;
+}
+
+.accordion .ai-coach-numbered-item:hover {
   background: rgba(99, 102, 241, 0.2);
   color: #f8fafc;
   transform: translateX(4px) translateY(-2px);
@@ -471,7 +469,7 @@ h1::after {
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2), 0 0 0 1px rgba(139, 92, 246, 0.2);
 }
 
-.accordion ol.numbered-list li:hover::before {
+.accordion .numbered-list .ai-coach-numbered-item:hover::before {
   color: #ec4899;
   transform: scale(1.2);
   text-shadow: 0 0 8px rgba(236, 72, 153, 0.7);
@@ -490,7 +488,7 @@ h1::after {
   color: #fff;
   cursor: pointer;
   transition: all 0.3s ease;
-  font-size: 0.9rem;
+  font-size: 14.4px !important;
   font-weight: 500;
   letter-spacing: 0.2px;
   white-space: nowrap;
@@ -503,33 +501,39 @@ h1::after {
 }
 
 /* Improve padding for specific options with longer text */
-.suggestion-chip[data-goal="Improve Endurance"] {
+.suggestion-chip[data-goal="Get Fit"] {
   padding-right: 22px; /* Extra padding for "Improve Endurance" */
+  font-size: 14.4px !important;
 }
 
 .suggestion-chip[data-goal="Athletic Performance"] {
   padding-right: 22px; /* Extra padding for "Athletic Performance" */
+  font-size: 14.4px !important;
 }
 
-.suggestion-chip[data-goal="Increase Flexibility"] {
+.suggestion-chip[data-goal="Stay Flexible"] {
   padding-right: 22px; /* Extra padding for "Increase Flexibility" */
 }
 
 /* Add shadow effects for each goal type */
 .suggestion-chip[data-goal="Lose Weight"] {
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.05), inset 0 0 8px rgba(0, 0, 0, 0.6), 0 0 10px rgba(231, 76, 60, 0.2);
+  font-size: 14.4px !important;
 }
 
 .suggestion-chip[data-goal="Build Muscle"] {
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.05), inset 0 0 8px rgba(0, 0, 0, 0.6), 0 0 10px rgba(52, 152, 219, 0.2);
+  font-size: 14.4px !important;
 }
 
 .suggestion-chip[data-goal="Get Stronger"] {
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.05), inset 0 0 8px rgba(0, 0, 0, 0.6), 0 0 10px rgba(241, 196, 15, 0.2);
+  font-size: 14.4px !important;
 }
 
-.suggestion-chip[data-goal="Increase Flexibility"] {
+.suggestion-chip[data-goal="Stay Flexible"] {
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.05), inset 0 0 8px rgba(0, 0, 0, 0.6), 0 0 10px rgba(155, 89, 182, 0.2);
+  font-size: 14.4px !important;
 }
 
 /* Enhanced hover effects */
@@ -547,24 +551,24 @@ h1::after {
   box-shadow: 0 10px 20px rgba(0, 0, 0, 0.4), 0 0 20px rgba(52, 152, 219, 0.3), inset 0 0 15px rgba(0, 0, 0, 0.8);
 }
 
-.suggestion-chip[data-goal="Improve Endurance"]:hover {
+.suggestion-chip[data-goal="Get Fit"]:hover {
   box-shadow: 0 10px 20px rgba(0, 0, 0, 0.4), 0 0 20px rgba(46, 204, 113, 0.3), inset 0 0 15px rgba(0, 0, 0, 0.8);
 }
 
 .suggestion-chip[data-goal="Get Stronger"]:hover {
-  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.4), 0 0 20px rgba(241, 196, 15, 0.3), inset 0 0 15px rgba(0, 0, 0, 0.8);
+  box-shadow: 10px 20px rgba(0, 0, 0, 0.4), 0 0 20px rgba(241, 196, 15, 0.3), inset 0 0 15px rgba(0, 0, 0, 0.8);
 }
 
-.suggestion-chip[data-goal="Increase Flexibility"]:hover {
+.suggestion-chip[data-goal="Stay Flexible"]:hover {
   box-shadow: 0 10px 20px rgba(0, 0, 0, 0.4), 0 0 20px rgba(155, 89, 182, 0.3), inset 0 0 15px rgba(0, 0, 0, 0.8);
 }
 
-.suggestion-chip[data-goal="Athletic Performance"]:hover {
+.suggestion-chip[data-goal="Be Athletic"]:hover {
   box-shadow: 0 10px 20px rgba(0, 0, 0, 0.4), 0 0 20px rgba(26, 188, 156, 0.3), inset 0 0 15px rgba(0, 0, 0, 0.8);
 }
 
 .suggestion-chip i {
-  font-size: 1.1rem;
+  font-size: 17.6px;
   transition: all 0.3s ease;
   width: 24px;
   height: 24px;
@@ -578,10 +582,10 @@ h1::after {
 .suggestions-container {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.8rem;
+  gap: 12.8px;
   justify-content: center;
-  margin-top: 1rem;
-  padding: 0.4rem;
+  margin-top: 16px;
+  padding: 6.4px;
   width: 100%;
   box-sizing: border-box;
 }
@@ -589,7 +593,7 @@ h1::after {
 .suggestion-chips {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.8rem;
+  gap: 12.8px;
   justify-content: center;
   width: 100%;
   max-width: 700px;
@@ -600,8 +604,8 @@ h1::after {
   width: 100%;
   text-align: center;
   color: #7f8c8d;
-  font-size: 0.9rem;
-  margin-bottom: 0.8rem;
+  font-size: 14.4px !important;
+  margin-bottom: 12.8px;
   font-weight: 500;
 }
 
@@ -631,7 +635,6 @@ h1::after {
 }
 
 /* Apply enhanced animation to plan containers */
-
 
 /* Apply smoother animations to accordion items */
 .accordion-item {
@@ -666,7 +669,7 @@ h1::after {
 @media (max-width: 1200px) {
   .input-section {
     max-width: 90%;
-    padding: 1.5rem;
+    padding: 24px;
   }
   
   /* Removed duplicate plans-grid styles */
@@ -678,7 +681,7 @@ h1::after {
 
 @media (max-width: 900px) {
   .input-container {
-    gap: 1rem;
+    gap: 48px; 
   }
 
   .goal-input {
@@ -686,17 +689,18 @@ h1::after {
   }
   
   .recommend-button {
-    padding: 0.8rem 1.5rem;
+    padding: 12.8px 24px;
     min-width: 160px;
+    font-size: 14.4px !important;
   }
   
   .suggestion-chips {
-    gap: 0.7rem;
+    gap: 11.2px !important;
   }
   
   .suggestion-chip {
-    padding: 0.6rem 1rem;
-    font-size: 0.85rem;
+    padding: 4.8px 11.2px !important;
+    font-size: 13.6px;
   }
   
   /* Removed duplicate plans-grid styles */
@@ -706,23 +710,24 @@ h1::after {
   .input-container {
     flex-direction: column;
     align-items: center;
-    gap: 1rem;
+    gap: 16px;
   }
   
   .goal-input {
-    width: 100%;
-    max-width: 100%;
+    width: 100% !important;
+    max-width: 100% !important;
   }
   
   .recommend-button {
-    width: 100%;
-    max-width: 400px;
+    width: 100% !important;
+    max-width: 400px !important;
+    font-size: 14.4px !important;
   }
 }
 
 @media (max-width: 480px) {
   .input-section {
-    padding: 1rem 0.5rem;
+    padding: 16px 8px;
     max-width: 100%;
   }
   
@@ -733,8 +738,8 @@ h1::after {
   .goal-input {
     width: 100%;
     margin-right: 0;
-    margin-bottom: 0.8rem;
-    padding: 0.7rem 1rem;
+    margin-bottom: 12.8px;
+    padding: 11.2px 16px;
   }
   
   .goal-input:focus, .goal-input:not(:placeholder-shown) {
@@ -743,56 +748,56 @@ h1::after {
   
   .recommend-button {
     width: 100%;
-    padding: 0.8rem 1rem;
-    font-size: 0.9rem;
+    padding: 12.8px 16px;
+    font-size: 14.4px !important;
   }
   
   .suggestions-container {
-    margin-top: 0.8rem;
-    padding: 0.3rem;
+    margin-top: 12.8px;
+    padding: 4.8px;
   }
   
   .suggestion-chips {
-    gap: 0.6rem;
+    gap: 9.6px;
   }
   
   .suggestion-chip {
-    padding: 0.5rem 0.8rem;
-    font-size: 0.8rem;
-    gap: 0.4rem;
+    padding: 8px 12.8px;
+    font-size: 12.8px;
+    gap: 6.4px;
   }
   
   .suggestion-chip i {
-    font-size: 1rem;
+    font-size: 16px;
   }
 
   /* Removed duplicate plans-container and plans-grid styles */
   
   /* Fix plan headers with better icon and text alignment */
   .plan-header {
-    padding: 1.5rem 1rem;
-    margin-bottom: 1.2rem;
+    padding: 24px 16px;
+    margin-bottom: 19.2px;
   }
   
   .plan-icon {
-    font-size: 2.2rem;
-    margin-bottom: 0.5rem;
+    font-size: 35.2px;
+    margin-bottom: 8px;
   }
   
   .plan-header h2 {
-    font-size: 1.4rem;
+    font-size: 22.4px;
   }
   
   /* Improve accordion header sizing and alignment */
   .accordion-header {
-    padding: 1rem;
+    padding: 16px;
     min-height: 65px;
     height: auto;
   }
   
   .accordion-icon {
-    font-size: 1.3rem;
-    margin-right: 0.8rem;
+    font-size: 20.8px;
+    margin-right: 12.8px;
   }
   
   .day-header-content {
@@ -815,7 +820,7 @@ h1::after {
   }
   
   .nested-accordion-icon {
-    font-size: 0.85rem;
+    font-size: 13.6px;
   }
   
   .meal-header-content {
@@ -833,63 +838,63 @@ h1::after {
   
   /* Better container sizing */
   .plan-section {
-    padding: 1.2rem;
-    margin-bottom: 1.5rem;
+    padding: 19.2px;
+    margin-bottom: 24px;
   }
   
   /* More readable text sizes */
   .accordion span, .nested-accordion span {
-    font-size: 0.95rem !important;
+    font-size: 15.2px !important;
   }
   
   .calories-info {
     padding: 2px 8px;
-    font-size: 0.8rem;
+    font-size: 12.8px;
   }
   
   /* Better spacing between accordion elements */
   .accordion-item {
-    margin-bottom: 1rem;
+    margin-bottom: 16px;
   }
   
   .nested-accordion-item {
-    margin-bottom: 0.8rem;
+    margin-bottom: 12.8px;
   }
 }
 
 @media (max-width: 350px) {
   .suggestion-chip {
-    padding: 0.5rem 0.7rem;
-    font-size: 0.75rem;
+    padding: 8px 11.2px;
+    font-size: 12px;
   }
   
   .accordion-content {
-    padding: 0.75rem 0.5rem;
+    padding: 12px 8px;
   }
   
   .nested-accordion-content {
-    padding: 0.5rem;
+    padding: 8px;
   }
   
-  .plan-section:last-child .numbered-list li {
+  .plan-section:last-child .numbered-list .ai-coach-numbered-item {
     padding: 10px 10px 10px 36px;
-    font-size: 0.85rem;
+    font-size: 13.6px;
   }
   
   .plan-header {
-    padding: 1.2rem 0.8rem;
+    padding: 19.2px 12.8px;
   }
   
   .plan-icon {
-    font-size: 2rem;
+    font-size: 32px;
   }
   
   .plan-header h2 {
-    font-size: 1.3rem;
+    font-size: 20.8px;
   }
   
   .accordion-header, .nested-accordion-header {
-    padding: 0.8rem;
+    padding: 12.8px;
   }
 }
 
@@ -946,7 +951,7 @@ h1::after {
 }
 
 .goal-popup-icon {
-  font-size: 3rem;
+  font-size: 48px !important;
   margin-bottom: 15px;
   background: rgba(255, 255, 255, 0.7);
   width: 80px;
@@ -962,8 +967,8 @@ h1::after {
 }
 
 .goal-popup-title {
-  font-size: 1.8rem;
-  font-weight: 700;
+  font-size: 28.8px !important;
+  font-weight: 700 !important;
   color: #2d3748;
   margin-bottom: 10px;
   text-align: center;
@@ -975,8 +980,8 @@ h1::after {
 }
 
 .goal-popup-description {
-  font-size: 1rem;
-  text-align: center;
+  font-size: 12.8px !important;
+  text-align: center !important;
   color: #4a5568;
   margin-bottom: 20px;
   max-width: 90%;
@@ -990,13 +995,13 @@ h1::after {
   background: #f3f4f6;
   color: #4b5563;
   border-radius: 50%;
-  width: 36px;
-  height: 36px;
+  width: 36px !important;
+  height: 36px !important;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  font-size: 1.2rem;
+  font-size: 19.2px;
   transition: all 0.2s ease;
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
   border: 1px solid rgba(255, 255, 255, 0.8);
@@ -1046,18 +1051,18 @@ h1::after {
 
 .form-group label {
   color: #2d3748;
-  font-size: 0.95rem;
-  font-weight: 600;
+  font-size: 15.2px !important;
+  font-weight: 600 !important;
   display: flex;
   align-items: center;
-  gap: 0.6rem;
+  gap: 9.6px;
   transition: all 0.3s ease;
   text-shadow: 0 1px 1px rgba(255, 255, 255, 0.8);
   margin-bottom: 8px;
 }
 
 .optional-label {
-  font-size: 0.8rem;
+  font-size: 12.8px !important;
   font-weight: normal;
   color: #718096;
   font-style: italic;
@@ -1066,7 +1071,7 @@ h1::after {
 
 .form-group label i {
   color: #3b82f6;
-  font-size: 1.1rem;
+  font-size: 17.6px;
   transition: all 0.3s ease;
 }
 
@@ -1084,7 +1089,7 @@ h1::after {
   border-radius: 8px;
   border: 1px solid #e2e8f0;
   background-color: rgba(255, 255, 255, 0.9);
-  font-size: 1rem;
+  font-size: 16px !important;
   color: #1a202c;
   transition: all 0.3s ease;
   outline: none;
@@ -1143,7 +1148,7 @@ h1::after {
 }
 
 .range-value {
-  font-size: 0.9rem;
+  font-size: 14.4px;
   color: #4b5563;
   text-align: center;
   margin-top: 5px;
@@ -1169,7 +1174,7 @@ h1::after {
   padding: 12px 24px;
   border-radius: 8px;
   font-weight: 600;
-  font-size: 1rem;
+  font-size: 16px;
   cursor: pointer;
   transition: all 0.3s ease;
   min-width: 120px;
@@ -1182,6 +1187,7 @@ h1::after {
 .popup-button.cancel {
   background-color: #f3f4f6;
   color: #4b5563;
+  font-size: 14.4px !important;
   border: 1px solid #e5e7eb;
 }
 
@@ -1194,6 +1200,7 @@ h1::after {
 .popup-button.submit {
   background: linear-gradient(135deg, #7c3aed, #6d28d9);
   color: white;
+  font-size: 14.4px !important;
   border: none;
   box-shadow: 0 4px 6px rgba(124, 58, 237, 0.2);
 }
@@ -1211,13 +1218,14 @@ h1::after {
 /* Health Conditions Select Enhancement */
 .form-group select[multiple] {
   height: 120px;
-  padding: 0.5rem;
+  padding: 8px;
 }
 
 .form-group select[multiple] option {
-  padding: 0.5rem;
-  margin: 0.2rem 0;
+  padding: 8px;
+  margin: 3.2px 0;
   border-radius: 4px;
+  font-size: 14.4px !important;
   transition: all 0.2s ease;
 }
 
@@ -1225,6 +1233,7 @@ h1::after {
   background: #3b82f6;
   color: white;
   font-weight: 500;
+  font-size: 14.4px !important;
   filter: none;
   backdrop-filter: none;
 }
@@ -1368,6 +1377,7 @@ label[for] span.required-asterisk {
 .form-group select[multiple] option {
   padding: 8px;
   margin: 3px 0;
+  font-size: 14.4px !important;
   border-radius: 6px;
   transition: all 0.2s ease;
   cursor: pointer;
@@ -1377,6 +1387,7 @@ label[for] span.required-asterisk {
   background: #3b82f6;
   color: white;
   font-weight: 500;
+  font-size: 14.4px !important;
   filter: none;
   backdrop-filter: none;
 }
@@ -1424,7 +1435,7 @@ label[for] span.required-asterisk {
 
 /* Nested Accordion Styles - with color themes for meal types */
 .nested-accordion {
-  margin: 0.5rem 0;
+  margin: 8px 0;
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -1546,10 +1557,10 @@ label[for] span.required-asterisk {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 1rem 1.2rem;
+  padding: 16px 19.2px;
   background: linear-gradient(135deg, #7c3aed, #8b5cf6);
   font-weight: 600;
-  font-size: 1.1rem;
+  font-size: 17.6px;
   color: white;
   border-radius: 12px 12px 0 0;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
@@ -1573,7 +1584,7 @@ label[for] span.required-asterisk {
 }
 
 .total-calories {
-  font-size: 0.95rem;
+  font-size: 15.2px;
   font-weight: 500;
   padding: 6px 14px;
   border-radius: 20px;
@@ -1590,7 +1601,7 @@ label[for] span.required-asterisk {
 }
 
 .total-calories i {
-  font-size: 0.9rem;
+  font-size: 14.4px;
   opacity: 0.9;
 }
 
@@ -1603,7 +1614,7 @@ label[for] span.required-asterisk {
 /* Responsive styles for calories display */
 @media (max-width: 480px) {
   .total-calories {
-    font-size: 0.85rem;
+    font-size: 13.6px;
     padding: 4px 10px;
   }
   
@@ -1692,8 +1703,8 @@ label[for] span.required-asterisk {
   align-items: center;
   justify-content: center;
   min-height: 200px;
-  margin: 1rem 0;
-  padding: 1rem;
+  margin: 16px 0;
+  padding: 16px;
 }
 
 .loader-container {
@@ -1708,7 +1719,7 @@ label[for] span.required-asterisk {
 
 .loader-icon {
   position: absolute;
-  font-size: 2rem;
+  font-size: 32px;
   filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3));
   transform-origin: center;
   opacity: 0;
@@ -1727,8 +1738,8 @@ label[for] span.required-asterisk {
   display: flex;
   flex-direction: column;
   width: 100%;
-  margin: 1.5rem auto 0;
-  padding: 0 0.5rem;
+  margin: 24px auto 0;
+  padding: 0 8px;
   box-sizing: border-box;
   animation: scaleUp 0.8s ease-out;
   align-items: center;
@@ -1739,7 +1750,7 @@ label[for] span.required-asterisk {
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  gap: 1.5rem;
+  gap: 24px;
   width: 100%;
   margin: 0 auto;
 }
@@ -1749,8 +1760,8 @@ label[for] span.required-asterisk {
   max-width: 100%;
   display: flex;
   flex-direction: column;
-  gap: 1rem;
-  padding: 1rem;
+  gap: 16px;
+  padding: 16px;
   border-radius: 16px;
   box-sizing: border-box;
   position: relative;
@@ -1801,13 +1812,13 @@ label[for] span.required-asterisk {
   background: rgba(15, 23, 42, 0.6);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
-  padding: 1.2rem;
+  padding: 19.2px;
   width: 100%;
   box-sizing: border-box;
 }
 
 /* List items styling for both meal and workout plans */
-.numbered-list li {
+.numbered-list .ai-coach-numbered-item {
   background: rgba(30, 41, 59, 0.8);
   border: 1px solid rgba(255, 255, 255, 0.1);
   transition: all 0.3s ease;
@@ -1820,12 +1831,12 @@ label[for] span.required-asterisk {
   letter-spacing: 0.2px;
 }
 
-.plan-section:first-child .numbered-list li:hover {
+.plan-section:first-child .numbered-list .ai-coach-numbered-item:hover {
   border-color: rgba(124, 58, 237, 0.3);
   background: rgba(124, 58, 237, 0.1);
 }
 
-.plan-section:last-child .numbered-list li:hover {
+.plan-section:last-child .numbered-list .ai-coach-numbered-item:hover {
   border-color: rgba(16, 185, 129, 0.3);
   background: rgba(16, 185, 129, 0.1);
 }
@@ -1856,7 +1867,7 @@ label[for] span.required-asterisk {
 
 .plan-section:last-child .accordion-header {
   background: linear-gradient(135deg, #10b981, #34d399);
-  padding: 1.3rem 1.5rem;
+  padding: 20.8px 24px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.12);
 }
 
@@ -1893,7 +1904,7 @@ label[for] span.required-asterisk {
 /* Workout list item styling */
 .plan-section:last-child .accordion-content {
   background: rgba(15, 28, 20, 0.7);
-  padding: 1.4rem;
+  padding: 22.4px;
   border-radius: 0 0 12px 12px;
 }
 
@@ -1904,10 +1915,10 @@ label[for] span.required-asterisk {
   list-style-type: none;
   counter-reset: item 0;
   display: grid;
-  gap: 0.9rem;
+  gap: 14.4px;
 }
 
-.plan-section:last-child .numbered-list li {
+.plan-section:last-child .numbered-list .ai-coach-numbered-item {
   position: relative;
   padding: 15px 16px 15px 52px;
   margin-bottom: 8px;
@@ -1920,7 +1931,7 @@ label[for] span.required-asterisk {
   transition: all 0.3s ease;
 }
 
-.plan-section:last-child .numbered-list li::before {
+.plan-section:last-child .numbered-list .ai-coach-numbered-item::before {
   counter-increment: item;
   content: counter(item);
   position: absolute;
@@ -1928,7 +1939,7 @@ label[for] span.required-asterisk {
   top: 50%;
   transform: translateY(-50%);
   font-weight: 700;
-  font-size: 0.5rem;
+  font-size: 8px;
   background: linear-gradient(135deg, #10b981, #34d399);
   color: white;
   width: 16px;
@@ -1940,14 +1951,14 @@ label[for] span.required-asterisk {
   box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
 }
 
-.plan-section:last-child .numbered-list li:hover {
+.plan-section:last-child .numbered-list .ai-coach-numbered-item:hover {
   background: linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(52, 211, 153, 0.08));
   transform: translateX(5px) translateY(-2px);
   box-shadow: 0 6px 15px rgba(0, 0, 0, 0.18);
   border-left: 3px solid #34d399;
 }
 
-.plan-section:last-child .numbered-list li:hover::before {
+.plan-section:last-child .numbered-list .ai-coach-numbered-item:hover::before {
   transform: translateY(-50%) scale(1.1);
   box-shadow: 0 3px 10px rgba(16, 185, 129, 0.4);
 }
@@ -1964,12 +1975,12 @@ label[for] span.required-asterisk {
 
 .nested-accordion-icon {
   margin-right: 8px;
-  font-size: 0.9rem;
+  font-size: 14.4px;
 }
 
 .nested-accordion-arrow {
   transition: transform 0.3s ease;
-  font-size: 0.8rem;
+  font-size: 12.8px;
 }
 
 .nested-accordion-content {
@@ -1989,7 +2000,7 @@ label[for] span.required-asterisk {
   counter-reset: item 0;
 }
 
-.nested-accordion-content .numbered-list li {
+.nested-accordion-content .numbered-list .ai-coach-numbered-item {
   position: relative;
   padding: 14px 16px 14px 48px;
   margin-bottom: 12px;
@@ -2000,35 +2011,34 @@ label[for] span.required-asterisk {
   font-weight: 500;
 }
 
-.nested-accordion-content .numbered-list li::before {
+.nested-accordion-content .numbered-list .ai-coach-numbered-item::before {
   counter-increment: item;
   content: counter(item) ".";
   position: absolute;
   left: 16px;
   font-weight: 700;
-  font-size: 1.1rem;
+  font-size: 17.6px;
 }
 
 /* Breakfast list item styling */
-.nested-accordion-header[data-meal-type="breakfast"] + .nested-accordion-content .numbered-list li::before {
+.nested-accordion-header[data-meal-type="breakfast"] + .nested-accordion-content .numbered-list .ai-coach-numbered-item::before {
   color: #ffb648;
 }
 
 /* Lunch list item styling */
-.nested-accordion-header[data-meal-type="lunch"] + .nested-accordion-content .numbered-list li::before {
+.nested-accordion-header[data-meal-type="lunch"] + .nested-accordion-content .numbered-list .ai-coach-numbered-item::before {
   color: #36d1dc;
 }
 
 /* Snack list item styling */
-.nested-accordion-header[data-meal-type="snack"] + .nested-accordion-content .numbered-list li::before {
+.nested-accordion-header[data-meal-type="snack"] + .nested-accordion-content .numbered-list .ai-coach-numbered-item::before {
   color: #38ef7d;
 }
 
 /* Dinner list item styling */
-.nested-accordion-header[data-meal-type="dinner"] + .nested-accordion-content .numbered-list li::before {
+.nested-accordion-header[data-meal-type="dinner"] + .nested-accordion-content .numbered-list .ai-coach-numbered-item ::before {
   color: #d04ed6;
 }
-
 /* Meal header with calories */
 .nested-accordion-header {
   padding: 10px 15px;
@@ -2054,7 +2064,7 @@ label[for] span.required-asterisk {
 }
 
 .calories-info {
-  font-size: 0.85rem;
+  font-size: 14px;
   font-weight: 500;
   padding: 3px 10px;
   border-radius: 20px;
@@ -2094,7 +2104,7 @@ label[for] span.required-asterisk {
   text-align: left;
 }
 
-.numbered-list li {
+.numbered-list .ai-coach-numbered-item {
   text-align: left;
   line-height: 1.4;
 }
@@ -2102,11 +2112,11 @@ label[for] span.required-asterisk {
 /* Medium screens */
 @media (min-width: 481px) {
   .plans-container {
-    padding: 0 1rem;
+    padding: 0 16px;
   }
   
   .plan-section {
-    padding: 1.5rem;
+    padding: 24px;
     max-width: 500px;
   }
 }
@@ -2123,7 +2133,7 @@ label[for] span.required-asterisk {
 @media (min-width: 901px) {
   .plans-grid {
     flex-direction: row;
-    gap: 2rem;
+    gap: 32px;
     max-width: 1200px;
     align-items: flex-start;
   }
@@ -2151,7 +2161,7 @@ label[for] span.required-asterisk {
   }
   
   /* Better text formatting */
-  .numbered-list li {
+  .numbered-list .ai-coach-numbered-item {
     line-height: 1.5;
   }
   
@@ -2170,7 +2180,7 @@ label[for] span.required-asterisk {
   }
   
   .plans-grid {
-    gap: 2.5rem;
+    gap: 40px;
     max-width: 1300px;
   }
 }
@@ -2182,12 +2192,12 @@ label[for] span.required-asterisk {
   }
   
   .plans-grid {
-    gap: 3rem;
+    gap: 48px;
     max-width: 1400px;
   }
   
   .accordion-content, .nested-accordion-content {
-    padding: 1.5rem;
+    padding: 24px;
   }
 }
 
@@ -2203,15 +2213,15 @@ label[for] span.required-asterisk {
   .plans-grid {
     width: 100%;
     padding: 0;
-    gap: 1.2rem;
+    gap: 19px;
   }
   
   /* Wider sections for meal and workout plans */
   .plan-section {
     width: 100%;
     max-width: 100%;
-    padding: 1rem 0.5rem;
-    margin: 0 0 1.2rem 0;
+    padding: 16px 8px;
+    margin: 0 0 19px 0;
     border-radius: 12px;
   }
   
@@ -2227,7 +2237,7 @@ label[for] span.required-asterisk {
   .accordion-content, .nested-accordion-content {
     width: 100%;
     max-width: 100%;
-    padding: 1rem 0.75rem;
+    padding: 16px 12px;
   }
   
   /* Wider numbered lists */
@@ -2237,9 +2247,9 @@ label[for] span.required-asterisk {
     padding-right: 0;
   }
   
-  .numbered-list li {
-  width: 100%;
-  box-sizing: border-box;
+  .numbered-list .ai-coach-numbered-item {
+    width: 100%;
+    box-sizing: border-box;
   }
   
   .plan-header h2 {
@@ -2257,11 +2267,11 @@ label[for] span.required-asterisk {
 /* Very small screens */
 @media (max-width: 350px) {
   .plan-section {
-    padding: 0.8rem 0.4rem;
+    padding: 13px 6px;
   }
   
   .accordion-content, .nested-accordion-content {
-    padding: 0.8rem 0.5rem;
+    padding: 13px 8px;
   }
 }
 
@@ -2281,7 +2291,7 @@ label[for] span.required-asterisk {
 .loading-text {
   font-family: 'Montserrat', sans-serif;
   font-weight: 600;
-  font-size: 1.2rem;
+  font-size: 19px;
   letter-spacing: 0.5px;
   background: linear-gradient(to right, #7c3aed, #ec4899);
   -webkit-background-clip: text;
@@ -2294,38 +2304,42 @@ label[for] span.required-asterisk {
   font-family: 'Montserrat', sans-serif;
   font-weight: 500;
   letter-spacing: 0.5px;
-  
 }
 
 /* Custom colors for each suggestion chip icon */
 .suggestion-chip[data-goal="Lose Weight"] i {
   color: #e74c3c;
- 
+  font-size: 20px !important;
   filter: drop-shadow(0 2px 4px rgba(231, 76, 60, 0.4));
 }
 
 .suggestion-chip[data-goal="Build Muscle"] i {
   color: #3498db;
+  font-size: 20px !important;
   filter: drop-shadow(0 2px 4px rgba(52, 152, 219, 0.4));
 }
 
-.suggestion-chip[data-goal="Improve Endurance"] i {
+.suggestion-chip[data-goal="Get Fit"] i {
   color: #2ecc71;
+  font-size: 20px !important;
   filter: drop-shadow(0 2px 4px rgba(46, 204, 113, 0.4));
 }
 
 .suggestion-chip[data-goal="Get Stronger"] i {
   color: #f1c40f;
+  font-size: 20px !important;
   filter: drop-shadow(0 2px 4px rgba(241, 196, 15, 0.4));
 }
 
-.suggestion-chip[data-goal="Increase Flexibility"] i {
+.suggestion-chip[data-goal="Stay Flexible"] i {
   color: #9b59b6;
+  font-size: 21px !important;
   filter: drop-shadow(0 2px 4px rgba(155, 89, 182, 0.4));
 }
 
-.suggestion-chip[data-goal="Athletic Performance"] i {
+.suggestion-chip[data-goal="Be Athletic"] i {
   color: #1abc9c;
+  font-size: 20px !important;
   filter: drop-shadow(0 2px 4px rgba(26, 188, 156, 0.4));
 }
 
@@ -2340,7 +2354,7 @@ label[for] span.required-asterisk {
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2), 0 0 15px rgba(52, 152, 219, 0.3);
 }
 
-.suggestion-chip[data-goal="Improve Endurance"]:hover {
+.suggestion-chip[data-goal="Get Fit"]:hover {
   border-color: #2ecc71;
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2), 0 0 15px rgba(46, 204, 113, 0.3);
 }
@@ -2350,12 +2364,12 @@ label[for] span.required-asterisk {
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2), 0 0 15px rgba(241, 196, 15, 0.3);
 }
 
-.suggestion-chip[data-goal="Increase Flexibility"]:hover {
+.suggestion-chip[data-goal="Stay Flexible"]:hover {
   border-color: #9b59b6;
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2), 0 0 15px rgba(155, 89, 182, 0.3);
 }
 
-.suggestion-chip[data-goal="Athletic Performance"]:hover {
+.suggestion-chip[data-goal="Be Athletic"]:hover {
   border-color: #1abc9c;
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2), 0 0 15px rgba(26, 188, 156, 0.3);
 }
@@ -2371,7 +2385,7 @@ label[for] span.required-asterisk {
   transform: scale(1.1);
 }
 
-.suggestion-chip[data-goal="Improve Endurance"]:hover i {
+.suggestion-chip[data-goal="Get Fit"]:hover i {
   color: #2ecc71;
   transform: scale(1.1);
 }
@@ -2381,12 +2395,12 @@ label[for] span.required-asterisk {
   transform: scale(1.1);
 }
 
-.suggestion-chip[data-goal="Increase Flexibility"]:hover i {
+.suggestion-chip[data-goal="Stay Flexible"]:hover i {
   color: #9b59b6;
   transform: scale(1.1);
 }
 
-.suggestion-chip[data-goal="Athletic Performance"]:hover i {
+.suggestion-chip[data-goal="Be Athletic"]:hover i {
   color: #1abc9c;
   transform: scale(1.1);
   box-shadow: 0 0 10px rgba(26, 188, 156, 0.6);
@@ -2414,7 +2428,7 @@ label[for] span.required-asterisk {
   box-shadow: 0 0 10px rgba(52, 152, 219, 0.6);
 }
 
-.suggestion-chip[data-goal="Improve Endurance"]:hover i {
+.suggestion-chip[data-goal="Get Fit"]:hover i {
   color: #fff;
   background-color: #2ecc71;
   animation: pulseBackground 1.5s infinite ease-in-out;
@@ -2428,14 +2442,14 @@ label[for] span.required-asterisk {
   box-shadow: 0 0 10px rgba(241, 196, 15, 0.6);
 }
 
-.suggestion-chip[data-goal="Increase Flexibility"]:hover i {
+.suggestion-chip[data-goal="Stay Flexible"]:hover i {
   color: #fff;
   background-color: #9b59b6;
   animation: pulseBackground 1.5s infinite ease-in-out;
   box-shadow: 0 0 10px rgba(155, 89, 182, 0.6);
 }
 
-.suggestion-chip[data-goal="Athletic Performance"]:hover i {
+.suggestion-chip[data-goal="Be Athletic"]:hover i {
   color: #fff;
   background-color: #1abc9c;
   animation: pulseBackground 1.5s infinite ease-in-out;
@@ -2444,26 +2458,26 @@ label[for] span.required-asterisk {
 
 /* Responsive title sizes for different screen sizes */
 @media (max-width: 768px) {
-  h1 {
-    font-size: 2.5rem;
-    margin-bottom: 1.2rem;
-    min-height: 2.8rem;
+  .ai-coach-title {
+    font-size: 40px !important;
+    margin-bottom: 19px;
+    min-height: 45px;
   }
 }
 
 @media (max-width: 480px) {
-  h1 {
-    font-size: 2rem;
-    margin-bottom: 1rem;
-    min-height: 2.4rem;
+  .ai-coach-title {
+    font-size: 32px !important;
+    margin-bottom: 16px;
+    min-height: 38px;
   }
 }
 
 @media (max-width: 350px) {
-  h1 {
-    font-size: 1.8rem;
+  .ai-coach-title {
+    font-size: 29px !important;
     letter-spacing: -0.3px;
-    min-height: 2.2rem;
+    min-height: 35px;
   }
 }
 
@@ -2473,8 +2487,8 @@ label[for] span.required-asterisk {
     display: grid;
     grid-template-rows: auto auto;
     grid-template-columns: repeat(4, auto);
-    row-gap: 1.2rem;
-    column-gap: 1.2rem;
+    row-gap: 19px;
+    column-gap: 19px;
     max-width: 900px;
     justify-content: center;
   }
@@ -2493,45 +2507,267 @@ label[for] span.required-asterisk {
   }
 }
 
-/* Tablet and medium-sized screens - staggered layout */
+/* Tablet and medium-sized screens - grid layout */
 @media (min-width: 481px) and (max-width: 900px) {
   .suggestion-chips {
-    display: grid;
-    grid-template-rows: auto auto auto;
-    grid-template-columns: repeat(3, auto);
-    row-gap: 1rem;
-    column-gap: 1rem;
-    max-width: 650px;
-    justify-content: center;
+    display: grid !important;
+    grid-template-rows: auto auto !important;
+    grid-template-columns: repeat(4, auto) !important;
+    row-gap: 19px !important;
+    column-gap: 19px !important;
+    max-width: 800px !important;
+    justify-content: center !important;
+    width: 100% !important;
+    padding: 8px !important;
   }
   
-  /* First row: 3 options */
-  .suggestion-chip:nth-child(1),
-  .suggestion-chip:nth-child(2),
-  .suggestion-chip:nth-child(3) {
-    grid-row: 1;
-  }
-  
-  /* Second row: 2 options, centered */
-  .suggestion-chip:nth-child(4),
-  .suggestion-chip:nth-child(5) {
-    grid-row: 2;
-  }
-  
-  .suggestion-chip:nth-child(4) {
-    grid-column: 1 / span 1;
-    justify-self: end;
-  }
-  
-  .suggestion-chip:nth-child(5) {
-    grid-column: 2 / span 1;
-    justify-self: start;
-  }
-  
-  /* Third row: 1 option, centered */
+  .suggestion-chip:nth-child(5), 
   .suggestion-chip:nth-child(6) {
-    grid-row: 3;
-    grid-column: 2;
-    justify-self: center;
+    grid-row: 2 !important;
+  }
+  
+  .suggestion-chip:nth-child(5) {
+    grid-column: 2 !important;
+  }
+  
+  .suggestion-chip:nth-child(6) {
+    grid-column: 3 !important;
+  }
+
+  .suggestion-chip {
+    width: auto !important;
+    min-width: 140px !important;
+    padding: 8px 18px !important;
+    font-size: 14px !important;
+    white-space: nowrap !important;
+    justify-content: center !important;
+  }
+
+  .suggestion-chip i {
+    font-size: 18px !important;
+    margin-right: 6px !important;
+  }
+}
+
+/* Mobile styles - for screens 480px and below */
+@media (max-width: 480px) {
+  /* Container adjustments */
+  .ai-coach-container {
+    padding: 16px 8px;
+  }
+
+  /* Title adjustments */
+  .ai-coach-title {
+    font-size: 29px;
+    margin-bottom: 16px;
+    padding: 0 8px;
+  }
+
+  /* Input section adjustments */
+  .input-section {
+    padding: 16px 8px;
+    margin: 0;
+    width: 100%;
+  }
+
+  .input-container {
+    flex-direction: column;
+    gap: 13px;
+    width: 100%;
+  }
+
+  .goal-input {
+    width: 100%;
+    max-width: 100%;
+    min-width: unset;
+    padding: 11px 16px;
+    font-size: 15px;
+    height: 38px;
+    min-height: 38px;
+  }
+
+  .goal-input:focus, 
+  .goal-input:not(:placeholder-shown) {
+    width: 100%;
+  }
+
+  /* Button adjustments */
+  .recommend-button {
+    width: 100%;
+    max-width: 100%;
+    padding: 13px 16px;
+    font-size: 14px !important;
+    min-width: unset;
+  }
+
+  /* Suggestion chips adjustments */
+  .suggestions-container {
+    padding: 8px;
+    margin-top: 13px;
+  }
+
+  .suggestion-chips {
+    gap: 10px;
+    padding: 0 5px;
+  }
+
+  .suggestion-chip {
+    padding: 6px 16px;
+    font-size: 14px;
+    gap: 6px;
+  }
+
+  .suggestion-chip i {
+    font-size: 14px;
+  }
+
+  /* Plans container adjustments */
+  .plans-container {
+    padding: 0;
+    margin-top: 16px;
+  }
+
+  .plans-grid {
+    gap: 16px;
+  }
+
+  .plan-section {
+    padding: 13px;
+    margin-bottom: 16px;
+    border-radius: 12px;
+  }
+
+  /* Plan headers */
+  .plan-header {
+    padding: 13px;
+    margin-bottom: 13px;
+  }
+
+  .plan-icon {
+    font-size: 32px;
+  }
+
+  .plan-header h2 {
+    font-size: 22px;
+  }
+
+  /* Accordion adjustments */
+  .accordion-item {
+    margin-bottom: 13px;
+  }
+
+  .accordion-header {
+    padding: 13px 16px;
+    min-height: 60px;
+    height: auto;
+    font-size: 15px;
+  }
+
+  .accordion-icon {
+    font-size: 19px;
+    margin-right: 10px;
+  }
+
+  .accordion-content {
+    padding: 13px;
+  }
+
+  /* Nested accordion adjustments */
+  .nested-accordion {
+    gap: 10px;
+  }
+
+  .nested-accordion-header {
+    padding: 8px 12px;
+    min-height: 40px;
+    font-size: 14px;
+  }
+
+  .nested-accordion-icon {
+    font-size: 14px;
+  }
+
+  .nested-accordion-content {
+    padding: 13px;
+  }
+
+  /* List items adjustments */
+  .numbered-list {
+    gap: 10px;
+  }
+
+  .numbered-list .ai-coach-numbered-item {
+    padding: 13px;
+    font-size: 14px;
+    line-height: 1.4;
+  }
+
+  /* Calories info adjustments */
+  .calories-info {
+    font-size: 13px;
+    padding: 2px 8px;
+  }
+
+  .total-calories {
+    font-size: 14px;
+    padding: 3px 10px;
+  }
+
+  /* Day and meal header content */
+  .day-header-content,
+  .meal-header-content {
+    gap: 6px;
+  }
+
+  .day-header-right,
+  .meal-header-right {
+    gap: 8px;
+  }
+  
+  /* Loading text adjustments */
+  .loading-text {
+    font-size: 16px;
+    padding: 0 16px;
+  }
+
+  /* Suggestions title */
+  .suggestions-title {
+    font-size: 14px !important;
+    margin-bottom: 10px;
+  }
+}
+
+/* Extra small screens */
+@media (max-width: 350px) {
+  .ai-coach-title {
+    font-size: 26px !important;
+  }
+
+  .suggestion-chip {
+    padding: 5px 14px;
+    font-size: 13px;
+  }
+
+  .suggestion-chip i {
+    font-size: 14px;
+  }
+
+  .plan-header h2 {
+    font-size: 21px;
+  }
+
+  .accordion-header {
+    padding: 11px;
+    font-size: 14px;
+  }
+
+  .nested-accordion-header {
+    padding: 6px 10px;
+    font-size: 14px;
+  }
+
+  .numbered-list .ai-coach-numbered-item {
+    padding: 11px;
+    font-size: 14px;
   }
 }
