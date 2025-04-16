@@ -89,21 +89,21 @@ MEAL_PLAN:
 For each day (Day 1 to N, where N is user requested days):
 Day X:
 - Breakfast (XXX calories):
-  1. [Meal item 1]
-  2. [Meal item 2]
-  3. [Meal item 3]
+  1. [[Meal item 1] with quantity]
+  2. [[Meal item 2] with quantity]
+  3. [[Meal item 3] with quantity]
 - Lunch (XXX calories):
-  1. [Meal item 1]
-  2. [Meal item 2]
-  3. [Meal item 3]
+  1. [[Meal item 1] with quantity]
+  2. [[Meal item 2] with quantity]
+  3. [[Meal item 3] with quantity]
 - Snack (XXX calories):
-  1. [Snack item 1]
-  2. [Snack item 2]
-  3. [Snack item 3]
+  1. [[Snack item 1] with quantity]
+  2. [[Snack item 2] with quantity]
+  3. [[Snack item 3] with quantity]
 - Dinner (XXX calories):
-  1. [Meal item 1]
-  2. [Meal item 2]
-  3. [Meal item 3]
+  1. [[Meal item 1] with quantity]
+  2. [[Meal item 2] with quantity]
+  3. [[Meal item 3] with quantity]
 
 Total Daily Calories: XXXX
 
@@ -124,21 +124,21 @@ EXAMPLE RESPONSE FORMAT:
 MEAL_PLAN:
 Day 1:
 - Breakfast (300 calories):
-  1. Oatmeal with berries
-  2. Greek yogurt
-  3. Almonds
+  1. [Oatmeal with berries - 1/2 cup]
+  2. [Greek yogurt - 150g]
+  3. [Almonds - 10 pieces]
 - Lunch (400 calories):
-  1. Grilled chicken salad
-  2. Whole grain bread
-  3. Olive oil dressing
+  1. [Grilled chicken salad - 200g]
+  2. [Whole grain bread - 1 slice]
+  3. [Olive oil dressing - 1 tbsp]
 - Snack (150 calories):
-  1. Apple
-  2. Peanut butter
-  3. Celery sticks
+  1. [Apple - 1 medium]
+  2. [Peanut butter - 1 tbsp]
+  3. [Celery sticks - 2 pieces]
 - Dinner (450 calories):
-  1. Baked salmon
-  2. Steamed broccoli
-  3. Brown rice
+  1. [Baked salmon - 150g]
+  2. [Steamed broccoli - 1 cup]
+  3. [Brown rice - 1/2 cup]
 
 Total Daily Calories: 1300
 

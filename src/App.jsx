@@ -17,6 +17,7 @@ const AIFitnessCoach = () => {
   const [timeline, setTimeline] = useState(3); // Default 3 months
   const [weeklySchedule, setWeeklySchedule] = useState(7); // Default 7 days
   const [expectedResults, setExpectedResults] = useState('');
+  const [inputError, setInputError] = useState(false); // Added for error state
   const [formData, setFormData] = useState({
     age: '',
     gender: '',
@@ -209,6 +210,8 @@ const AIFitnessCoach = () => {
       ease: "none"
     });
     
+   
+    
     console.log('Animation sequence started');
   };
 
@@ -244,8 +247,15 @@ const AIFitnessCoach = () => {
 
   // Event handlers
   const handleRecommendation = async () => {
-    if (!fitnessGoal || isLoading) return;
+    if (!fitnessGoal.trim()) {
+      setInputError(true);
+      setTimeout(() => setInputError(false), 3000); // Clear error after 3 seconds
+      return;
+    }
     
+    if (isLoading) return;
+    
+    setInputError(false);
     setIsLoading(true);
     setShowPlans(false);
     setLastProcessedGoal(fitnessGoal);
@@ -396,7 +406,7 @@ Remember: ALWAYS respond in English regardless of the input language.`;
         physicalAttributes
       });
 
-      const response = await fetch('https://ask-our-coach.onrender.com/chat', {
+      const response = await fetch('http://127.0.0.1:5000/chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -1051,7 +1061,7 @@ Remember: ALWAYS respond in English regardless of the input language.`;
         healthConditions: formData.healthConditions
       });
       
-      const response = await fetch('https://ask-our-coach.onrender.com/chat', {
+      const response = await fetch('http://127.0.0.1:5000/chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -1313,7 +1323,7 @@ Remember: ALWAYS respond in English regardless of the input language.`;
         <div className="input-container">
           <textarea
             id="fitnessGoal"
-            className="goal-input"
+            className={`goal-input ${inputError ? 'input-error' : ''}`}
             placeholder="Enter your fitness goal..."
             value={fitnessGoal}
             onChange={(e) => {
@@ -1348,6 +1358,11 @@ Remember: ALWAYS respond in English regardless of the input language.`;
             Get Recommendations
           </button>
         </div>
+        {inputError && (
+          <div className="input-error-message">
+            <i className="fas fa-exclamation-circle"></i> Please enter your fitness goal first
+          </div>
+        )}
 
         <div className="suggestions-container">
           <div className="suggestions-title">Popular Goals:</div>
@@ -1378,6 +1393,7 @@ Remember: ALWAYS respond in English regardless of the input language.`;
             <i className="fas fa-mountain loader-icon"></i>
           </div>
           <p className="loading-text">Crafting your personalized plan...</p>
+      
         </div>
       )}
 
