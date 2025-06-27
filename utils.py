@@ -30,10 +30,10 @@ goal_config = {
 }
 
 
-user_profile = {
+user_profile_default = {
     "name": "John Doe",
-    "weight_kg": 70,
-    "height_cm": 175,
+    "weight": 70,
+    "height": 175,
     "age": 26,
     "gender": "male",
     "activity_level": "moderate",  
@@ -43,29 +43,3 @@ user_profile = {
     "allergies": ["nuts"]
 }
 
-
-user_goal = user_profile["goal"]
-bmi = calculate_bmi(user_profile["weight_kg"], user_profile["height_cm"])
-tdee = calculate_tdee(user_profile["weight_kg"], user_profile["height_cm"], user_profile["age"], user_profile["gender"], user_profile["activity_level"])
-
-# Fetch goal config or fallback to "get_fit"
-goal_plan = goal_config.get(user_goal, goal_config["get_fit"])
-target_calories = tdee + goal_plan["calorie_offset"]
-workout_focus = goal_plan["workout_focus"]
-
-user_context = f"""
-USER PROFILE:
-- Age: {user_profile["age"]}
-- Weight: {user_profile["weight_kg"]} kg
-- Height: {user_profile["height_cm"]} cm
-- BMI: {bmi}
-- Gender: {user_profile["gender"]}
-- Activity Level: {user_profile["activity_level"]}
-- Goal: {user_profile["goal"]}
-- Location: {user_profile["location"]}
-- Dietary Preferences: {", ".join(user_profile["preferences"])}
-- Allergies: {", ".join(user_profile["allergies"])}
-- TDEE: {tdee} kcal/day
-- Target Calories for Goal: {target_calories} kcal/day
-- Primary Workout Focus: {workout_focus}
-"""

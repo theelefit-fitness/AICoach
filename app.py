@@ -8,7 +8,7 @@ import os
 from dotenv import load_dotenv
 import time
 import uuid
-from utils import calculate_bmi, calculate_tdee, goal_config, user_context
+from utils import calculate_bmi, calculate_tdee, goal_config, user_profile_default
 
 # Load environment variables
 load_dotenv()
@@ -58,7 +58,46 @@ def chat_with_gpt():
 
         data = request.get_json()
         prompt = data.get('prompt', '')
-        force_new = data.get('forceNew', False)
+        incoming_profile = data.get('userProfile', {})
+
+        if not prompt:
+            return jsonify({"error": "Prompt is required"}), 400
+        
+        user_profile = {**user_profile_default, **incoming_profile}
+
+        # Use consistent keys (fallback to both possible keys)
+        weight = user_profile.get("weight_kg") or user_profile.get("weight")
+        height = user_profile.get("height_cm") or user_profile.get("height")
+        age = user_profile.get("age")
+        gender = user_profile.get("gender")
+        diet = user_profile.get("diet", "vegetarian")
+        allergies = user_profile.get("allergies", [])
+        goal = user_profile.get("goal", "fat loss")
+        activity_level = user_profile.get("activity_level") or user_profile.get("activityLevel", "moderate")
+        location = user_profile.get("location", "")
+        preferences = user_profile.get("preferences", [])
+
+        bmi = calculate_bmi(weight, height)
+        tdee = calculate_tdee(weight, height, age, gender, activity_level)
+        goal_plan = goal_config.get(goal, goal_config["get_fit"])
+        target_calories = tdee + goal_plan["calorie_offset"]
+        workout_focus = goal_plan["workout_focus"]
+        user_context = f"""
+USER PROFILE:
+- Age: {age}
+- Weight: {weight} kg
+- Height: {height} cm
+- BMI: {bmi}
+- Gender: {gender}
+- Activity Level: {activity_level}
+- Goal: {goal}
+- Location: {location}
+- Dietary Preferences: {", ".join(preferences)}
+- Allergies: {", ".join(allergies)}
+- TDEE: {tdee} kcal/day
+- Target Calories for Goal: {target_calories} kcal/day
+- Primary Workout Focus: {workout_focus}
+"""
 
         if not prompt:
             return jsonify({"error": "Prompt is required"}), 400
@@ -72,20 +111,6 @@ def chat_with_gpt():
         
         # Actual prompt sent to AI includes the unique identifier
         unique_prompt = f"{prompt}\n\nRequest-ID: {unique_id}-{timestamp}"
-
-        # Redis cache (skip if force_new is True)
-        # if not force_new:
-        #     try:
-        #         print(f"Checking cache for key: '{cache_key[:50]}...'")
-        #         cached_response = redis_client.get(cache_key)
-        #         if cached_response:
-        #             print(f"Cache HIT! Returning cached response from {cache_key[:50]}...")
-        #             return jsonify({"reply": json.loads(cached_response), "cached": True})
-        #         else:
-        #             print(f"Cache MISS for key: '{cache_key[:50]}...'")
-        #     except Exception as e:
-        #         print(f"Error checking cache: {str(e)}")
-                # Continue with API call if cache fails
 
         print(f"Making API call to OpenAI with prompt: '{user_context[:50]}...'")
         # Call OpenAI
@@ -118,7 +143,7 @@ Output must include:
 MEAL_PLAN FORMAT:
 MEAL_PLAN:
 For each day (Day 1 to N, where N is user requested days):
-Day X:
+Day 
 - Breakfast (XXX calories(compusolry)):
   1. [[Meal item 1] with quantity(compusolry)]
   2. [[Meal item 2] with quantity(compusolry)]
@@ -164,16 +189,6 @@ Day X - [Focus Area]:
         )
 
         reply = response.choices[0].message.content
-        
-        # Don't cache if force_new is True
-        if not force_new:
-            try:
-                print(f"Storing response in cache with key: '{cache_key[:50]}...'")
-                redis_client.setex(cache_key, 24 * 60 * 60, json.dumps(reply))  # cache for 24 hours
-                print(f"Successfully stored in cache")
-            except Exception as e:
-                print(f"Error storing in cache: {str(e)}")
-                # Continue even if caching fails
 
         return jsonify({"reply": reply, "cached": False})
 
@@ -242,6 +257,29 @@ Day X - [Focus Area]:
             
 #             if cached_response:
 #                 print(f"Cache check HIT for key: '{prompt[:50]}...'")
+#                 return jsonify({
+#                     "cached": True,
+#                     "reply": json.loads(cached_response),
+#                     "requestedDays": prompt_info["requested_days"],
+#                     "promptInfo": prompt_info
+#                 })
+#             else:
+#                 print(f"Cache check MISS for key: '{prompt[:50]}...'")
+#         except Exception as e:
+#             print(f"Error checking cache: {str(e)}")
+#             # Continue with miss response if cache check fails
+        
+#         return jsonify({
+#             "cached": False,
+#             "promptInfo": prompt_info
+#         })
+
+#     except Exception as e:
+#         return jsonify({"error": str(e)}), 500
+
+# Run locally
+if __name__ == '__main__':
+    app.run(host='127.0.0.1', port=5000, debug=True)
 #                 return jsonify({
 #                     "cached": True,
 #                     "reply": json.loads(cached_response),
