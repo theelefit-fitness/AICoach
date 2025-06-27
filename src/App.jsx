@@ -1,7 +1,8 @@
 import "./App.css";
 import React, { useState, useEffect, useRef } from 'react';
 import { gsap } from 'gsap';
-
+import { ref, push, serverTimestamp } from 'firebase/database';
+import { database } from './firebase';
 
 const AIFitnessCoach = () => {
   // State management
@@ -12,12 +13,14 @@ const AIFitnessCoach = () => {
   const [openMealAccordion, setOpenMealAccordion] = useState('');
   const [openMealSubAccordion, setOpenMealSubAccordion] = useState('');
   const [openWorkoutAccordion, setOpenWorkoutAccordion] = useState('');
-  const [showPopup, setShowPopup] = useState(false);
   const [currentPopupGoal, setCurrentPopupGoal] = useState(null);
   const [timeline, setTimeline] = useState(3); // Default 3 months
   const [weeklySchedule, setWeeklySchedule] = useState(7); // Default 7 days
   const [expectedResults, setExpectedResults] = useState('');
   const [inputError, setInputError] = useState(false); // Added for error state
+  const [inputLocked, setInputLocked] = useState(true); // Default to locked
+  const [isCustomerLoggedIn, setIsCustomerLoggedIn] = useState(false); // Shopify customer state
+  const [customerData, setCustomerData] = useState(null); // Shopify customer data
   const [formData, setFormData] = useState({
     age: '',
     gender: '',
@@ -36,8 +39,6 @@ const AIFitnessCoach = () => {
   const plansContainerRef = useRef(null);
   const mealAccordionRef = useRef(null);
   const workoutAccordionRef = useRef(null);
-  const popupRef = useRef(null);
-  const overlayRef = useRef(null);
 
   // Data
   const suggestions = [
@@ -108,6 +109,19 @@ const AIFitnessCoach = () => {
       .replace(/[^\w\s.,()-:]/g, '') // Allow only alphanumeric, spaces, dots, commas, parentheses, hyphens, and colons
       .replace(/\s+/g, ' ')
       .trim();
+  };
+
+  // API endpoint for production or development
+  const getApiUrl = () => {
+    // Use env variable if available, otherwise fallback to these options
+    if (process.env.NODE_ENV === 'development') {
+      return 'http://127.0.0.1:5000/chat'; // Local development
+    } else {
+      // In production, use the EleFit API endpoint 
+      return 'https://yantraprise.com/chat';
+      // If you're hosting the backend on the same domain, use a relative URL:
+      // return '/apps/coach-api/chat';
+    }
   };
 
   const cleanItemText = (text) => {
@@ -245,6 +259,72 @@ const AIFitnessCoach = () => {
     return 'Mixed Training';
   };
 
+  // Function to store data in Firebase
+  const storeSubmissionInFirebase = (prompt) => {
+    try {
+      const timestamp = new Date().toISOString();
+      
+      // Try to get customer data from Liquid-injected script first
+      let shopifyCustomerId = 'guest';
+      let shopifyCustomerName = 'guest';
+      let shopifyCustomerEmail = 'guest';
+      
+      try {
+        const customerDataScript = document.getElementById('shopify-customer-data');
+        if (customerDataScript) {
+          const shopifyCustomerData = JSON.parse(customerDataScript.textContent);
+          if (shopifyCustomerData.id) {
+            shopifyCustomerId = shopifyCustomerData.id;
+            shopifyCustomerName = `${shopifyCustomerData.first_name || ''} ${shopifyCustomerData.last_name || ''}`.trim() || 'guest';
+            shopifyCustomerEmail = shopifyCustomerData.email || 'guest';
+          }
+        }
+      } catch (e) {
+        console.log('Error parsing Shopify customer data script:', e);
+      }
+
+      // Fallback to window.customer_data if available
+      if (shopifyCustomerId === 'guest' && window.customer_data?.id) {
+        shopifyCustomerId = window.customer_data.id;
+        shopifyCustomerName = `${window.customer_data.first_name || ''} ${window.customer_data.last_name || ''}`.trim() || 'guest';
+        shopifyCustomerEmail = window.customer_data.email || 'guest';
+      }
+
+      // Final fallback to other sources
+      if (shopifyCustomerId === 'guest' && window.Shopify?.customer?.id) {
+        shopifyCustomerId = window.Shopify.customer.id;
+        shopifyCustomerName = `${window.Shopify.customer.first_name || ''} ${window.Shopify.customer.last_name || ''}`.trim() || 'guest';
+        shopifyCustomerEmail = window.Shopify.customer.email || 'guest';
+      }
+
+      const submissionData = {
+        prompt: prompt,
+        shopifyUserId: shopifyCustomerId,
+        shopifyUsername: shopifyCustomerName,
+        shopifyUserEmail: shopifyCustomerEmail,
+        requestTime: serverTimestamp(),
+        clientTimestamp: timestamp,
+        isLoggedIn: isCustomerLoggedIn,
+        formData: currentPopupGoal ? { ...formData } : null,
+        userAgent: navigator.userAgent,
+        platform: navigator.platform
+      };
+      
+      console.log('Storing submission in Firebase:', submissionData);
+      
+      const fitnessGoalsRef = ref(database, 'fitnessGoals');
+      push(fitnessGoalsRef, submissionData)
+        .then(() => {
+          console.log('Successfully stored submission in Firebase');
+        })
+        .catch((error) => {
+          console.error('Firebase push error:', error);
+        });
+    } catch (error) {
+      console.error('Error storing submission in Firebase:', error);
+    }
+  };
+
   // Event handlers
   const handleRecommendation = async () => {
     if (!fitnessGoal.trim()) {
@@ -259,6 +339,12 @@ const AIFitnessCoach = () => {
     setIsLoading(true);
     setShowPlans(false);
     setLastProcessedGoal(fitnessGoal);
+    
+    // Close any open goal form when recommendation button is clicked
+    setCurrentPopupGoal(null);
+
+    // Store the submission in Firebase
+    storeSubmissionInFirebase(fitnessGoal);
 
     try {
       // Extract requested days from the prompt if specified
@@ -392,28 +478,45 @@ Notes:
 
 Remember: ALWAYS respond in English regardless of the input language.`;
 
-      const combinedPrompt = `${systemPrompt}\n\nUser Query: ${enhancedUserPrompt}`;
+      // First, check if this query is in the cache
+      try {
+        const cacheCheckResponse = await fetch(getApiUrl().replace('/chat', '/check-cache'), {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ 
+            prompt: enhancedUserPrompt
+          })
+        });
+        
+        if (cacheCheckResponse.ok) {
+          const cacheData = await cacheCheckResponse.json();
+          console.log('Cache check response:', cacheData);
+          
+          // If we have a cached response, use it
+          if (cacheData.cached && cacheData.reply) {
+            console.log('Using cached response');
+            parseResponse(cacheData.reply);
+            setShowPlans(true);
+            setIsLoading(false);
+            return;
+          }
+        }
+      } catch (error) {
+        console.warn('Cache check failed:', error);
+        // Continue with normal request if cache check fails
+      }
 
-      // Add timestamp to force a fresh response 
-      const timestamp = new Date().getTime();
-      const forceNewPrompt = `${combinedPrompt}\n\nTimestamp: ${timestamp}`;
-      
-      // Log detection and request details
-      console.log('Prompt details:', {
-        originalPrompt: fitnessGoal,
-        requestedDays,
-        culturalPreferences: detectedCulturalPreferences,
-        physicalAttributes
-      });
-
-      const response = await fetch('http://127.0.0.1:5000/chat', {
+      // If no cache hit, proceed with normal request
+      const response = await fetch(getApiUrl(), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ 
-          prompt: forceNewPrompt,
-          forceNew: true
+          prompt: enhancedUserPrompt,
+          forceNew: false
         })
       });
 
@@ -867,22 +970,6 @@ Remember: ALWAYS respond in English regardless of the input language.`;
     // Set the goal immediately (even if it's the same as before)
     setFitnessGoal(suggestion);
     
-    // Always show the popup with the goal details when a suggestion is clicked
-    if (suggestion && goalData[suggestion]) {
-      showGoalPopup(suggestion);
-    }
-  };
-
-  const showGoalPopup = (goal) => {
-    // Reset popup state completely before showing with new goal
-    if (popupRef.current) {
-      // Force popup to reset
-      popupRef.current.scrollTop = 0;
-    }
-    
-    // Set the current goal that was clicked
-    setCurrentPopupGoal(goal);
-    
     // Reset form state to empty values, but keep timeframe at default value
     setFormData({
       age: '',
@@ -897,36 +984,13 @@ Remember: ALWAYS respond in English regardless of the input language.`;
       healthConditions: []
     });
     
-    // Small timeout to ensure DOM updates before showing the popup
-    setTimeout(() => {
-      setShowPopup(true);
-    }, 10);
-  };
-
-  const closeGoalPopup = () => {
-    // Animate out first
-    if (popupRef.current) {
-      popupRef.current.classList.remove('active');
-      
-      // Small delay to allow animation to complete
-      setTimeout(() => {
-        setShowPopup(false);
-        // Only clear the current popup goal after animation finishes
-        // This ensures the popup content doesn't flicker during close animation
-        setTimeout(() => {
-          setCurrentPopupGoal(null);
-          
-          // Restore scroll position if needed
-          const scrollY = document.body.style.top;
-          if (scrollY) {
-            window.scrollTo(0, parseInt(scrollY || '0', 10) * -1);
-          }
-        }, 100);
-      }, 200);
-    } else {
-      setShowPopup(false);
-      setCurrentPopupGoal(null);
-    }
+    // Clear previous meal and workout plans when a new goal is selected
+    setShowPlans(false);
+    setMealPlansByDay([]);
+    setWorkoutSections([]);
+    
+    // Instead of showing popup, set the current goal for highlighting and displaying details
+    setCurrentPopupGoal(suggestion);
   };
 
   const handleFormChange = (e) => {
@@ -967,10 +1031,13 @@ Remember: ALWAYS respond in English regardless of the input language.`;
     }
     
     // Close popup before proceeding
-    closeGoalPopup();
+    setCurrentPopupGoal(null);
     
     // Set the input value to show what's being processed
     setFitnessGoal(currentPopupGoal);
+    
+    // Store the submission in Firebase with form data
+    storeSubmissionInFirebase(currentPopupGoal + ' (from form)');
     
     // Get the requested days from form data
     const requestedDays = parseInt(formData.workoutDays) || 5; // Default to 5 days if parsing fails
@@ -1018,33 +1085,35 @@ Remember: ALWAYS respond in English regardless of the input language.`;
     try {
       console.clear();
       
-      // System prompt to enforce English responses
-      const systemPrompt = `You are a fitness assistant. ALWAYS respond in English regardless of the input language.
-
-IMPORTANT: All responses MUST be in English, even if the user's prompt is in another language.
-
-MEAL_PLAN:
-Provide a detailed meal plan for each section (Breakfast, Snack, Lunch, Dinner) with multiple items listed and clear varieties. Use numbers (1., 2., 3.) instead of dashes. The meal type (e.g., Breakfast, Snack) and all meal descriptions must be in English.
-
-WORKOUT_PLAN:
-- If the user specifies a number of days (e.g., "3 days", "5 days"), provide a workout plan for exactly that many days.
-- If no specific days are mentioned, provide a standard 7-day plan.
-- Each day should be clearly marked as "Day 1:", "Day 2:", etc.
-- List multiple exercises per day, each numbered for better readability.
-- All sections and exercise descriptions MUST be in English.
-- For muscle gain focus on progressive overload and proper exercise splits.
-
-IMPORTANT: ALWAYS include both a MEAL_PLAN section and a WORKOUT_PLAN section in your response, regardless of what the user asks for.
-
-Ensure each section follows this format exactly to maintain readability and parsing integrity.
-Remember: ALWAYS respond in English regardless of the input language.`;
-
-      // Combine system prompt with user prompt
-      const combinedPrompt = `${systemPrompt}\n\nUser Query: ${enhancedUserPrompt}`;
-
-      // Add timestamp to force a fresh response each time
-      const timestamp = new Date().getTime();
-      const forceNewPrompt = `${combinedPrompt}\n\nTimestamp: ${timestamp}`;
+      // First, check if this query is in the cache
+      try {
+        const cacheCheckResponse = await fetch(getApiUrl().replace('/chat', '/check-cache'), {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ 
+            prompt: enhancedUserPrompt
+          })
+        });
+        
+        if (cacheCheckResponse.ok) {
+          const cacheData = await cacheCheckResponse.json();
+          console.log('Cache check response:', cacheData);
+          
+          // If we have a cached response, use it
+          if (cacheData.cached && cacheData.reply) {
+            console.log('Using cached response');
+            parseResponse(cacheData.reply);
+            setShowPlans(true);
+            setIsLoading(false);
+            return;
+          }
+        }
+      } catch (error) {
+        console.warn('Cache check failed:', error);
+        // Continue with normal request if cache check fails
+      }
 
       console.log('Sending API request to backend with user profile data...');
       console.log('User profile:', {
@@ -1061,14 +1130,14 @@ Remember: ALWAYS respond in English regardless of the input language.`;
         healthConditions: formData.healthConditions
       });
       
-      const response = await fetch('http://127.0.0.1:5000/chat', {
+      const response = await fetch(getApiUrl(), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ 
-          prompt: forceNewPrompt,
-          forceNew: true  // Add flag to bypass cache on the server
+          prompt: enhancedUserPrompt,
+          forceNew: false
         })
       });
 
@@ -1129,73 +1198,20 @@ Remember: ALWAYS respond in English regardless of the input language.`;
     }
   }, [isLoading]);
 
-  // Effect to manage modal behavior
+  // Effect to manage popup behavior - remove it since we no longer use popups
   useEffect(() => {
     const handleEsc = (e) => {
-      if (e.key === 'Escape' && showPopup) {
-        closeGoalPopup();
+      if (e.key === 'Escape' && currentPopupGoal) {
+        setCurrentPopupGoal(null);
       }
     };
-    
-    // Handle window resize to ensure popup stays centered horizontally
-    const handleResize = () => {
-      if (showPopup && popupRef.current) {
-        // Force reflow of the popup to ensure it's centered after resize
-        const popup = popupRef.current;
-        popup.style.display = 'none';
-        // Force reflow
-        void popup.offsetHeight;
-        popup.style.display = 'block';
-      }
-    };
-    
-    // Reset popup on each open to ensure fresh rendering
-    if (showPopup && popupRef.current && currentPopupGoal) {
-      const iconElement = popupRef.current.querySelector('.goal-popup-icon');
-      if (iconElement && goalData[currentPopupGoal]) {
-        iconElement.style.color = goalData[currentPopupGoal].color;
-      }
-      
-      // Make sure we're at top of popup content
-      popupRef.current.scrollTop = 0;
-      
-      // Ensure popup is visible even if page is scrolled
-      window.scrollTo({
-        top: 0,
-        behavior: 'smooth'
-      });
-    }
-    
-    // Lock body scroll when popup is open
-    if (showPopup) {
-      const scrollY = window.scrollY;
-      document.body.style.position = 'fixed';
-      document.body.style.width = '100%';
-      document.body.style.top = `-${scrollY}px`;
-      document.body.style.overflow = 'hidden';
-    } else {
-      const scrollY = document.body.style.top;
-      document.body.style.position = '';
-      document.body.style.width = '';
-      document.body.style.top = '';
-      document.body.style.overflow = '';
-      if (scrollY) {
-        window.scrollTo(0, parseInt(scrollY || '0', 10) * -1);
-      }
-    }
     
     document.addEventListener('keydown', handleEsc);
-    window.addEventListener('resize', handleResize);
     
     return () => {
       document.removeEventListener('keydown', handleEsc);
-      window.removeEventListener('resize', handleResize);
-      document.body.style.position = '';
-      document.body.style.width = '';
-      document.body.style.top = '';
-      document.body.style.overflow = '';
     };
-  }, [showPopup, currentPopupGoal]);
+  }, [currentPopupGoal]);
 
   // Helper function to estimate calories for a meal item
   const estimateCalories = (mealItem) => {
@@ -1312,6 +1328,180 @@ Remember: ALWAYS respond in English regardless of the input language.`;
     return totalCalories;
   };
 
+  // Function to get actual customer name from Shopify
+  const getCustomerName = () => {
+    try {
+      // Check for Liquid-injected customer data first (most reliable)
+      const customerDataScript = document.getElementById('shopify-customer-data');
+      if (customerDataScript) {
+        try {
+          const shopifyCustomerData = JSON.parse(customerDataScript.textContent);
+          if (shopifyCustomerData.first_name || shopifyCustomerData.last_name) {
+            return `${shopifyCustomerData.first_name || ''} ${shopifyCustomerData.last_name || ''}`.trim();
+          }
+        } catch (e) {
+          console.log('Error parsing Shopify customer data script:', e);
+        }
+      }
+
+      // Try window.customer_data which might be set by Liquid
+      if (window.customer_data) {
+        const { first_name, last_name } = window.customer_data;
+        if (first_name || last_name) {
+          return `${first_name || ''} ${last_name || ''}`.trim();
+        }
+      }
+
+      // Try other sources
+      if (window.Shopify?.customer) {
+        const firstName = window.Shopify.customer.first_name || '';
+        const lastName = window.Shopify.customer.last_name || '';
+        const fullName = `${firstName} ${lastName}`.trim();
+        if (fullName) return fullName;
+      }
+
+      return null;
+    } catch (error) {
+      console.error('Error getting customer name:', error);
+      return null;
+    }
+  };
+
+  // Function to check if customer is actually logged in
+  const isActuallyLoggedIn = () => {
+    try {
+      // Check Liquid-injected customer data first
+      const customerDataScript = document.getElementById('shopify-customer-data');
+      if (customerDataScript) {
+        try {
+          const shopifyCustomerData = JSON.parse(customerDataScript.textContent);
+          if (shopifyCustomerData.id) return true;
+        } catch (e) {
+          console.log('Error parsing Shopify customer data script:', e);
+        }
+      }
+
+      // Check window.customer_data from Liquid
+      if (window.customer_data?.id) return true;
+
+      // Check other sources
+      if (window.Shopify?.customer?.id) return true;
+      if (window.meta?.page?.customerId) return true;
+      
+      return false;
+    } catch (error) {
+      console.error('Error checking login status:', error);
+      return false;
+    }
+  };
+
+  // Check for Shopify customer session
+  useEffect(() => {
+    // Function to check if we're running in Shopify context
+    const isInShopifyContext = () => {
+      return window.Shopify !== undefined || 
+             window.ShopifyAnalytics !== undefined || 
+             window.meta?.page?.customerId !== undefined ||
+             window.customer !== undefined ||
+             document.querySelector('body.template-page') !== null;
+    };
+
+    // Function to check customer login status in Shopify
+    const checkShopifyCustomer = () => {
+      if (!isInShopifyContext() && process.env.NODE_ENV === 'development') {
+        const urlParams = new URLSearchParams(window.location.search);
+        const loggedIn = urlParams.get('loggedIn') === 'true';
+        
+        if (loggedIn) {
+          console.log('Development mode: Simulating logged-in customer');
+          setIsCustomerLoggedIn(true);
+          setInputLocked(false);
+          setCustomerData({
+            id: '12345',
+            name: 'Test Customer',
+            email: 'test@example.com'
+          });
+        } else {
+          console.log('Development mode: Simulating logged-out customer');
+          setIsCustomerLoggedIn(false);
+          setInputLocked(true);
+        }
+        return;
+      }
+
+      // Production mode - check actual login status
+      const actuallyLoggedIn = isActuallyLoggedIn();
+      setIsCustomerLoggedIn(actuallyLoggedIn);
+      setInputLocked(!actuallyLoggedIn);
+
+      if (actuallyLoggedIn) {
+        // Try to get customer data from Liquid-injected script first
+        let customerInfo = null;
+        
+        try {
+          const customerDataScript = document.getElementById('shopify-customer-data');
+          if (customerDataScript) {
+            const shopifyCustomerData = JSON.parse(customerDataScript.textContent);
+            customerInfo = {
+              id: shopifyCustomerData.id,
+              name: `${shopifyCustomerData.first_name || ''} ${shopifyCustomerData.last_name || ''}`.trim(),
+              email: shopifyCustomerData.email
+            };
+          }
+        } catch (e) {
+          console.log('Error parsing Shopify customer data script:', e);
+        }
+
+        // Fallback to window.customer_data if available
+        if (!customerInfo && window.customer_data) {
+          customerInfo = {
+            id: window.customer_data.id,
+            name: `${window.customer_data.first_name || ''} ${window.customer_data.last_name || ''}`.trim(),
+            email: window.customer_data.email
+          };
+        }
+
+        // Final fallback to other sources
+        if (!customerInfo) {
+          const customerName = getCustomerName();
+          if (customerName) {
+            customerInfo = {
+              id: window.Shopify?.customer?.id || 
+                  window.meta?.page?.customerId || 
+                  'unknown',
+              name: customerName,
+              email: window.Shopify?.customer?.email || 
+                    window.meta?.page?.customer?.email || 
+                    'unknown'
+            };
+          }
+        }
+
+        setCustomerData(customerInfo);
+      } else {
+        setCustomerData(null);
+      }
+    };
+
+    // Check for customer data immediately and set up an interval to check periodically
+    checkShopifyCustomer();
+    const interval = setInterval(checkShopifyCustomer, 2000); // Check every 2 seconds
+
+    return () => clearInterval(interval);
+  }, []);
+
+  // Toggle lock handler - redirect to login or unlock based on context
+  const toggleInputLock = () => {
+    if (isCustomerLoggedIn) {
+      // If already logged in, just unlock the input
+      setInputLocked(false);
+    } else {
+      // If not logged in, redirect to Shopify login with correct return URL
+      const returnPath = window.reactAiCoachUrl || "/pages/react-ai-coach";
+      window.location.href = `https://theelefit.com/account/login?return_to=${returnPath}`;
+    }
+  };
+
   return (
     <div className="ai-coach-container">
         
@@ -1320,44 +1510,107 @@ Remember: ALWAYS respond in English regardless of the input language.`;
       </h1>
 
       <div className="input-section">
-        <div className="input-container">
-          <textarea
-            id="fitnessGoal"
-            className={`goal-input ${inputError ? 'input-error' : ''}`}
-            placeholder="Enter your fitness goal..."
-            value={fitnessGoal}
-            onChange={(e) => {
-              setFitnessGoal(e.target.value);
-              // Auto-adjust height based on content, with a minimum height
-              // First reset to default height to properly collapse when text is deleted
-              e.target.style.height = '42px';
-              const scrollHeight = e.target.scrollHeight;
-              
-              // Apply the new height with a small buffer to prevent flickering
-              if (e.target.value === '') {
-                e.target.style.height = '42px'; // Reset to default when empty
-              } else {
-                e.target.style.height = `${Math.max(scrollHeight, 42)}px`;
-              }
-            }}
-            onKeyPress={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                handleRecommendation();
-              }
-            }}
-            rows="1"
-          />
-          <button
-            className="recommend-button"
-            onClick={(e) => {
-              e.preventDefault();
-              handleRecommendation();
-            }}
-          >
-            Get Recommendations
-          </button>
-        </div>
+      <>
+  {isActuallyLoggedIn() && (
+    <div className="welcome-message">
+      {(() => {
+        const customerName = getCustomerName();
+        return customerName ? `Welcome back, ${customerName}!` : null;
+      })()}
+    </div>
+  )}
+
+  <div className="input-container">
+    <textarea
+      id="fitnessGoal"
+      className={`goal-input ${inputError ? 'input-error' : ''}`}
+      placeholder="Enter your fitness goal..."
+      value={fitnessGoal}
+      onChange={(e) => {
+        setFitnessGoal(e.target.value);
+        setShowPlans(false);
+        e.target.style.height = '42px';
+        const scrollHeight = e.target.scrollHeight;
+        e.target.style.height = `${Math.max(scrollHeight, 42)}px`;
+      }}
+      onKeyPress={(e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+          e.preventDefault();
+          handleRecommendation();
+        }
+      }}
+      rows="1"
+    />
+    <button
+      className="recommend-button"
+      onClick={(e) => {
+        e.preventDefault();
+        handleRecommendation();
+      }}
+    >
+      Get Recommendations
+    </button>
+  </div>
+</>
+
+        {/* {inputLocked ? (
+          <>
+            <div className="custom-goal-label">Want something specific?</div>
+            <div className="locked-input-container" onClick={toggleInputLock}>
+              <div className="locked-input">
+                <i className="fas fa-lock lock-icon"></i>
+                <span className="locked-text">Enter your custom goal...</span>
+              </div>
+            </div>
+          </>
+        ) : (
+          <>
+            {isCustomerLoggedIn && customerData && (
+              <div className="welcome-message">Welcome back, {customerData.name || 'EleFit Member'}!</div>
+            )}
+            <div className="input-container">
+              <textarea
+                id="fitnessGoal"
+                className={`goal-input ${inputError ? 'input-error' : ''}`}
+                placeholder="Enter your fitness goal..."
+                value={fitnessGoal}
+                onChange={(e) => {
+                  setFitnessGoal(e.target.value);
+                  // Clear previous plans when input changes
+                  setShowPlans(false);
+                  
+                  // Auto-adjust height based on content, with a minimum height
+                  // First reset to default height to properly collapse when text is deleted
+                  e.target.style.height = '42px';
+                  const scrollHeight = e.target.scrollHeight;
+                  
+                  // Apply the new height with a small buffer to prevent flickering
+                  if (e.target.value === '') {
+                    e.target.style.height = '42px'; // Reset to default when empty
+                  } else {
+                    e.target.style.height = `${Math.max(scrollHeight, 42)}px`;
+                  }
+                }}
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    handleRecommendation();
+                  }
+                }}
+                rows="1"
+              />
+              <button
+                className="recommend-button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  handleRecommendation();
+                }}
+              >
+                Get Recommendations
+              </button>
+            </div>
+          </>
+        )} */}
         {inputError && (
           <div className="input-error-message">
             <i className="fas fa-exclamation-circle"></i> Please enter your fitness goal first
@@ -1370,7 +1623,7 @@ Remember: ALWAYS respond in English regardless of the input language.`;
             {suggestions.map((suggestion, index) => (
               <div
                 key={index}
-                className="suggestion-chip"
+                className={`suggestion-chip ${currentPopupGoal === suggestion.text ? 'selected-goal' : ''}`}
                 data-goal={suggestion.text}
                 style={{ animation: `fadeInUp 0.5s ease forwards ${index * 0.1}s` }}
                 onClick={() => handleSuggestionClick(suggestion.text)}
@@ -1379,195 +1632,22 @@ Remember: ALWAYS respond in English regardless of the input language.`;
                 {suggestion.text}
               </div>
             ))}
-          </div>
-        </div>
       </div>
 
-      {isLoading && (
-        <div className="loading-animation" id="loadingAnimation">
-          <div className="loader-container">
-            <i className="fas fa-dumbbell loader-icon"></i>
-            <i className="fas fa-running loader-icon"></i>
-            <i className="fas fa-heart loader-icon"></i>
-            <i className="fas fa-fire loader-icon"></i>
-            <i className="fas fa-mountain loader-icon"></i>
-          </div>
-          <p className="loading-text">Crafting your personalized plan...</p>
-      
-        </div>
-      )}
-
-      {showPlans && (
-        <div className="plans-container" id="plansContainer" ref={plansContainerRef}>
-          <div className="plans-grid">
-            <div className="plan-section meal-section">
-            <div className="plan-header">
-              <i className="fas fa-utensils plan-icon"></i>
-              <h2>Meal Plan</h2>
-            </div>
-            <div className="accordion" id="mealAccordion" ref={mealAccordionRef}>
-                {mealPlansByDay.map((dayPlan) => (
-                <div
-                    key={`day-${dayPlan.dayNumber}`}
-                  className="accordion-item"
-                >
-                  <div
-                    className="accordion-header"
-                    data-meal={`day${dayPlan.dayNumber}`}
-                    onClick={() => toggleAccordion('meal', `day${dayPlan.dayNumber}`)}
-                  >
-                    <div className="day-header-content">
-                      <i className="fas fa-calendar-day accordion-icon"></i>
-                      <span style={{fontSize: '18px', fontWeight: '600' }}>Day {dayPlan.dayNumber}</span>
-                    </div>
-                    <div className="day-header-right">
-                      <div className="total-calories">
-                        <i className="fas fa-fire-alt"></i>
-                        {Math.floor(calculateDailyCalories(dayPlan.meals))} cal/day
-                      </div>
-                      <i
-                        className="fas fa-chevron-right accordion-arrow"
-                        style={{
-                          transform: openMealAccordion === `day${dayPlan.dayNumber}` ? 'rotate(90deg)' : 'rotate(0deg)'
-                        }}
-                      ></i>
-                    </div>
-                  </div>
-                  <div
-                    className="accordion-content"
-                    style={{
-                      display: openMealAccordion === `day${dayPlan.dayNumber}` ? 'block' : 'none',
-                      animation: openMealAccordion === `day${dayPlan.dayNumber}` ? 'slideDown 0.3s ease forwards' : 'none',
-                      width: '100%',
-                      boxSizing: 'border-box'
-                    }}
-                  >
-                    <div className="nested-accordion">
-                        {dayPlan.meals.map((meal) => (
-                          <div key={`${dayPlan.dayNumber}-${meal.type}`} className="nested-accordion-item">
-                          <div 
-                            className="nested-accordion-header"
-                              data-meal-type={meal.type.toLowerCase()}
-                              onClick={() => toggleAccordion('meal-sub', `${dayPlan.dayNumber}-${meal.type}`)}
-                          >
-                            <div className="meal-header-content">
-                                <i className={`fas ${getMealIcon(meal.type)} nested-accordion-icon`}></i>
-                                <span style={{ fontSize: '16px', fontWeight: '500' }}>{meal.type}</span>
-                            </div>
-                            <div className="meal-header-right">
-                              <span className="calories-info">
-                                  {meal.calories > 0 ? meal.calories : Math.floor(calculateMealCalories(meal.items))} cal
-                              </span>
-                              <i
-                                className="fas fa-chevron-right nested-accordion-arrow"
-                                style={{
-                                    transform: openMealSubAccordion === `${dayPlan.dayNumber}-${meal.type}` ? 'rotate(90deg)' : 'rotate(0deg)'
-                                }}
-                              ></i>
-                            </div>
-                          </div>
-                          <div
-                            className="nested-accordion-content"
-                            style={{
-                                display: openMealSubAccordion === `${dayPlan.dayNumber}-${meal.type}` ? 'block' : 'none',
-                                animation: openMealSubAccordion === `${dayPlan.dayNumber}-${meal.type}` ? 'slideDown 0.3s ease forwards' : 'none'
-                              }}
-                            >
-                              <ol className="numbered-list" start="1">
-                                {meal.items.map((item, index) => (
-                                  <li className="ai-coach-numbered-item" key={`${dayPlan.dayNumber}-${meal.type}-item-${index}`}>{item}</li>
-                              ))}
-                            </ol>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-            <div className="plan-section workout-section">
-            <div className="plan-header">
-              <i className="fas fa-dumbbell plan-icon"></i>
-              <h2>Workout Plan</h2>
-            </div>
-            <div className="accordion" id="workoutAccordion" ref={workoutAccordionRef}>
-                {workoutSections.map((section) => (
-                <div
-                    key={`workout-day-${section.dayNumber}`}
-                  className="accordion-item"
-                >
-                  <div
-                    className="accordion-header"
-                    data-day={`day${section.dayNumber}`}
-                    onClick={() => toggleAccordion('workout', `day${section.dayNumber}`)}
-                  >
-                    <div className="day-header-content">
-                        <i className={`fas ${getWorkoutIcon(section.workoutType)} accordion-icon`}></i>
-                          <span style={{ fontSize: '18px', fontWeight: '600' }}>Day {section.dayNumber}: {section.workoutType}</span>
-                      </div>
-                    <div className="day-header-right">
-                    <i
-                      className="fas fa-chevron-right accordion-arrow"
-                      style={{
-                        transform: openWorkoutAccordion === `day${section.dayNumber}` ? 'rotate(90deg)' : 'rotate(0deg)'
-                      }}
-                    ></i>
-                    </div>
-                  </div>
-                  <div
-                    className="accordion-content"
-                    style={{
-                      display: openWorkoutAccordion === `day${section.dayNumber}` ? 'block' : 'none',
-                      animation: openWorkoutAccordion === `day${section.dayNumber}` ? 'slideDown 0.3s ease forwards' : 'none',
-                      width: '100%',
-                      boxSizing: 'border-box'
-                    }}
-                  >
-                    <ol className="numbered-list" start="1">
-                        {section.exercises.map((exercise, index) => (
-                          <li className="ai-coach-numbered-item" key={`day${section.dayNumber}-exercise-${index}`}>{exercise.description}</li>
-                      ))}
-                    </ol>
-                  </div>
-                </div>
-              ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Popup Overlay */}
-      <div
-        className={`popup-overlay ${showPopup ? 'active' : ''}`}
-        id="popupOverlay"
-        ref={overlayRef}
-        onClick={closeGoalPopup}
-      ></div>
-
-      {/* Goal Popup */}
-      <div
-        className={`goal-popup ${showPopup ? 'active' : ''}`}
-        id="goalPopup"
-        ref={popupRef}
-        style={{ display: showPopup ? 'block' : 'none' }}
-      >
-        <i className="fas fa-times goal-popup-close" id="closePopup" onClick={closeGoalPopup}></i>
+          {/* Display goal details below instead of in popup */}
         {currentPopupGoal && goalData[currentPopupGoal] && (
-          <>
+            <div className="goal-details-container" style={{ borderTopColor: goalData[currentPopupGoal].color }}>
+              <div className="goal-details-content">
             <i
               key={`icon-${currentPopupGoal}`}
-              className={`fas ${goalData[currentPopupGoal].icon} goal-popup-icon`}
+              className={`fas ${goalData[currentPopupGoal].icon} goal-details-icon`}
               style={{ color: goalData[currentPopupGoal].color }}
+              data-goal={currentPopupGoal}
             ></i>
-            <h2 className="goal-popup-title">{currentPopupGoal}</h2>
-            <p className="goal-popup-description">{goalData[currentPopupGoal].description}</p>
-          </>
-        )}
-        <form className="goal-popup-form" id="goalForm" onSubmit={handleFormSubmit}>
+                <h2 className="goal-details-title">{currentPopupGoal}</h2>
+                <p className="goal-details-description">{goalData[currentPopupGoal].description}</p>
+                
+                <form className="goal-details-form" id="goalForm" onSubmit={handleFormSubmit}>
           <div className="form-row">
             <div className="form-group">
               <label htmlFor="age">Age <span className="required-asterisk">*</span></label>
@@ -1732,21 +1812,181 @@ Remember: ALWAYS respond in English regardless of the input language.`;
             </select>
           </div>
 
-          <div className="popup-buttons">
+                  <div className="goal-details-buttons">
             <button
               type="button"
-              className="popup-button cancel"
-              id="cancelForm"
-              onClick={closeGoalPopup}
+                      className="goal-details-button cancel"
+                      onClick={() => setCurrentPopupGoal(null)}
             >
               Cancel
             </button>
-            <button type="submit" className="popup-button submit">
+                    <button type="submit" className="goal-details-button submit">
               Continue
             </button>
           </div>
         </form>
       </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {isLoading && (
+        <div className="loading-animation" id="loadingAnimation">
+          <div className="loader-container">
+            <i className="fas fa-dumbbell loader-icon"></i>
+            <i className="fas fa-running loader-icon"></i>
+            <i className="fas fa-heart loader-icon"></i>
+            <i className="fas fa-fire loader-icon"></i>
+            <i className="fas fa-mountain loader-icon"></i>
+          </div>
+          <p className="loading-text">Crafting your personalized plan...</p>
+      
+        </div>
+      )}
+
+      {showPlans && (
+        <div className="plans-container" id="plansContainer" ref={plansContainerRef}>
+          <div className="plans-grid">
+            <div className="plan-section meal-section">
+            <div className="plan-header">
+              <i className="fas fa-utensils plan-icon"></i>
+              <h2>Meal Plan</h2>
+            </div>
+            <div className="accordion" id="mealAccordion" ref={mealAccordionRef}>
+                {mealPlansByDay.map((dayPlan) => (
+                <div
+                    key={`day-${dayPlan.dayNumber}`}
+                  className="accordion-item"
+                >
+                  <div
+                    className="accordion-header"
+                    data-meal={`day${dayPlan.dayNumber}`}
+                    onClick={() => toggleAccordion('meal', `day${dayPlan.dayNumber}`)}
+                  >
+                    <div className="day-header-content">
+                      <i className="fas fa-calendar-day accordion-icon"></i>
+                      <span style={{fontSize: '18px', fontWeight: '600' }}>Day {dayPlan.dayNumber}</span>
+                    </div>
+                    <div className="day-header-right">
+                      <div className="total-calories">
+                        <i className="fas fa-fire-alt"></i>
+                        {Math.floor(calculateDailyCalories(dayPlan.meals))} cal/day
+                      </div>
+                      <i
+                        className="fas fa-chevron-right accordion-arrow"
+                        style={{
+                          transform: openMealAccordion === `day${dayPlan.dayNumber}` ? 'rotate(90deg)' : 'rotate(0deg)'
+                        }}
+                      ></i>
+                    </div>
+                  </div>
+                  <div
+                    className="accordion-content"
+                    style={{
+                      display: openMealAccordion === `day${dayPlan.dayNumber}` ? 'block' : 'none',
+                      animation: openMealAccordion === `day${dayPlan.dayNumber}` ? 'slideDown 0.3s ease forwards' : 'none',
+                      width: '100%',
+                      boxSizing: 'border-box'
+                    }}
+                  >
+                    <div className="nested-accordion">
+                        {dayPlan.meals.map((meal) => (
+                          <div key={`${dayPlan.dayNumber}-${meal.type}`} className="nested-accordion-item">
+                          <div 
+                            className="nested-accordion-header"
+                              data-meal-type={meal.type.toLowerCase()}
+                              onClick={() => toggleAccordion('meal-sub', `${dayPlan.dayNumber}-${meal.type}`)}
+                          >
+                            <div className="meal-header-content">
+                                <i className={`fas ${getMealIcon(meal.type)} nested-accordion-icon`}></i>
+                                <span style={{ fontSize: '16px', fontWeight: '500' }}>{meal.type}</span>
+                            </div>
+                            <div className="meal-header-right">
+                              <span className="calories-info">
+                                  {meal.calories > 0 ? meal.calories : Math.floor(calculateMealCalories(meal.items))} cal
+                              </span>
+                              <i
+                                className="fas fa-chevron-right nested-accordion-arrow"
+                                style={{
+                                    transform: openMealSubAccordion === `${dayPlan.dayNumber}-${meal.type}` ? 'rotate(90deg)' : 'rotate(0deg)'
+                                }}
+                              ></i>
+                            </div>
+                          </div>
+                          <div
+                            className="nested-accordion-content"
+                            style={{
+                                display: openMealSubAccordion === `${dayPlan.dayNumber}-${meal.type}` ? 'block' : 'none',
+                                animation: openMealSubAccordion === `${dayPlan.dayNumber}-${meal.type}` ? 'slideDown 0.3s ease forwards' : 'none'
+                              }}
+                            >
+                              <ol className="numbered-list" start="1">
+                                {meal.items.map((item, index) => (
+                                  <li className="ai-coach-numbered-item" key={`${dayPlan.dayNumber}-${meal.type}-item-${index}`}>{item}</li>
+                              ))}
+                            </ol>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+            <div className="plan-section workout-section">
+            <div className="plan-header">
+              <i className="fas fa-dumbbell plan-icon"></i>
+              <h2>Workout Plan</h2>
+            </div>
+            <div className="accordion" id="workoutAccordion" ref={workoutAccordionRef}>
+                {workoutSections.map((section) => (
+                <div
+                    key={`workout-day-${section.dayNumber}`}
+                  className="accordion-item"
+                >
+                  <div
+                    className="accordion-header"
+                    data-day={`day${section.dayNumber}`}
+                    onClick={() => toggleAccordion('workout', `day${section.dayNumber}`)}
+                  >
+                    <div className="day-header-content">
+                        <i className={`fas ${getWorkoutIcon(section.workoutType)} accordion-icon`}></i>
+                          <span style={{ fontSize: '18px', fontWeight: '600' }}>Day {section.dayNumber}: {section.workoutType}</span>
+                      </div>
+                    <div className="day-header-right">
+                    <i
+                      className="fas fa-chevron-right accordion-arrow"
+                      style={{
+                        transform: openWorkoutAccordion === `day${section.dayNumber}` ? 'rotate(90deg)' : 'rotate(0deg)'
+                      }}
+                    ></i>
+                    </div>
+                  </div>
+                  <div
+                    className="accordion-content"
+                    style={{
+                      display: openWorkoutAccordion === `day${section.dayNumber}` ? 'block' : 'none',
+                      animation: openWorkoutAccordion === `day${section.dayNumber}` ? 'slideDown 0.3s ease forwards' : 'none',
+                      width: '100%',
+                      boxSizing: 'border-box'
+                    }}
+                  >
+                    <ol className="numbered-list" start="1">
+                        {section.exercises.map((exercise, index) => (
+                          <li className="ai-coach-numbered-item" key={`day${section.dayNumber}-exercise-${index}`}>{exercise.description}</li>
+                      ))}
+                    </ol>
+                  </div>
+                </div>
+              ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
@@ -1756,6 +1996,18 @@ function App() {
     <>
      <div className="main-container">
       <AIFitnessCoach />
+      {process.env.NODE_ENV === 'development' && (
+        <div className="dev-panel">
+          <h3>Development Testing Panel</h3>
+          <div className="dev-controls">
+            <a href="?loggedIn=true" className="dev-button login">Simulate Logged In</a>
+            <a href="?loggedIn=false" className="dev-button logout">Simulate Logged Out</a>
+          </div>
+          <div className="dev-note">
+            Note: This panel only appears during local development
+          </div>
+        </div>
+      )}
      </div>
     </>
   );

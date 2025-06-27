@@ -1,0 +1,56 @@
+{% comment %}
+  Always show the React app - authentication is handled within the app
+{% endcomment %}
+
+<!-- React App Mount Point -->
+<div id="react-ai-coach-container">
+  {% if customer %}
+    <script id="shopify-customer-data" type="application/json">
+      {
+        "id": {{ customer.id | json }},
+        "first_name": {{ customer.first_name | json }},
+        "last_name": {{ customer.last_name | json }},
+        "email": {{ customer.email | json }}
+      }
+    </script>
+    <script>
+      window.customer_data = {
+        id: {{ customer.id | json }},
+        first_name: {{ customer.first_name | json }},
+        last_name: {{ customer.last_name | json }},
+        email: {{ customer.email | json }}
+      };
+    </script>
+  {% endif %}
+  <div id="root"></div>
+</div>
+
+<!-- Expose Customer Data (if logged in) -->
+<script>
+  window.meta = window.meta || {};
+  window.meta.page = window.meta.page || {};
+
+  {% if customer %}
+    window.meta.page.customerId = {{ customer.id | json }};
+    window.meta.page.customer = {
+      name: {{ customer.first_name | json }} + " " + {{ customer.last_name | json }},
+      email: {{ customer.email | json }},
+      firstName: {{ customer.first_name | json }},
+      lastName: {{ customer.last_name | json }}
+    };
+    
+    // Keep your existing variable for backward compatibility
+    window.shopifyCustomer = {
+      id: {{ customer.id | json }},
+      email: {{ customer.email | json }},
+      firstName: {{ customer.first_name | json }},
+      lastName: {{ customer.last_name | json }}
+    };
+  {% endif %}
+</script>
+
+<!-- Load React App Styles -->
+{{ 'style.css' | asset_url | stylesheet_tag }}
+
+<!-- Load React App Script -->
+<script src="{{ 'app.js' | asset_url }}" defer></script> 
