@@ -32,8 +32,8 @@ goal_config = {
 
 user_profile_default = {
     "name": "John Doe",
-    "weight": 70,
-    "height": 175,
+    "weight": 68,
+    "height": 165,
     "age": 26,
     "gender": "male",
     "activity_level": "moderate",  

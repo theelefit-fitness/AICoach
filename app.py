@@ -23,26 +23,26 @@ CORS(app)
 api_key = os.getenv("OPENAI_API_KEY")
 
 # Initialize Redis client (make sure Redis is running locally)
-redis_client = redis.Redis(host='127.0.0.1', port=6379, db=0, decode_responses=True)
+# redis_client = redis.Redis(host='127.0.0.1', port=6379, db=0, decode_responses=True)
 
 # Test Redis connection
-try:
-    redis_test = redis_client.ping()
-    print(f"Redis connection test: {'SUCCESS' if redis_test else 'FAILED'}")
-except Exception as e:
-    print(f"Redis connection error: {str(e)}")
-    # Set up a dummy redis client that won't error on operations if Redis fails
-    class DummyRedis:
-        def get(self, key):
-            print(f"DummyRedis: get({key}) - Redis not available")
-            return None
-            
-        def setex(self, key, time, value):
-            print(f"DummyRedis: setex({key}, {time}, {value[:30]}...) - Redis not available")
-            return None
-    
-    redis_client = DummyRedis()
-    print("Using DummyRedis for cache operations")
+# try:
+#     redis_test = redis_client.ping()
+#     print(f"Redis connection test: {'SUCCESS' if redis_test else 'FAILED'}")
+# except Exception as e:
+#     print(f"Redis connection error: {str(e)}")
+#     # Set up a dummy redis client that won't error on operations if Redis fails
+#     class DummyRedis:
+#         def get(self, key):
+#             print(f"DummyRedis: get({key}) - Redis not available")
+#             return None
+#             
+#         def setex(self, key, time, value):
+#             print(f"DummyRedis: setex({key}, {time}, {value[:30]}...) - Redis not available")
+#             return None
+#     
+#     redis_client = DummyRedis()
+#     print("Using DummyRedis for cache operations")
 
 @app.route('/')
 def index():
@@ -99,15 +99,9 @@ USER PROFILE:
 - Primary Workout Focus: {workout_focus}
 """
 
-        if not prompt:
-            return jsonify({"error": "Prompt is required"}), 400
-
         # Add a unique identifier to the prompt
         unique_id = str(uuid.uuid4())[:8]
         timestamp = int(time.time())
-        
-        # Cache key will be the original prompt
-        cache_key = prompt
         
         # Actual prompt sent to AI includes the unique identifier
         unique_prompt = f"{prompt}\n\nRequest-ID: {unique_id}-{timestamp}"
@@ -115,35 +109,38 @@ USER PROFILE:
         print(f"Making API call to OpenAI with prompt: '{user_context[:50]}...'")
         # Call OpenAI
         client = openai.OpenAI(api_key=api_key)
+        print("Target calories for goal:", target_calories)
         response = client.chat.completions.create(
-            model="gpt-4o-mini",
+            model="gpt-4o",
             messages = [
-    {
-        "role": "system",
-        "content": f"""{user_context}
+                {
+                    "role": "system",
+                    "content": f"""
 
-You are a helpful fitness assistant.
-
+You are generating a personalized fitness and nutrition plan for a user based on their profile and goals.
+Your task is to create a detailed 7-day plan that includes both meal and workout plans.
+Take into consideration the target calories, dietary preferences, allergies, cultural background, and fitness level of the user.
+Make a meal plan that has exactly that number of calories per day, and a workout plan that matches the user's fitness level and goals.
+Keep all the text normalized and concise, avoiding unnecessary verbosity.
 Generate a complete 7-day personalized fitness plan for the user above. The plan should include:
 
-1. **MEAL_PLAN**:
+1. MEAL_PLAN:
    - 3 meals + 1 snack per day
    - Each item should include portion size and calories
    - Total daily calories should be close to the user's target
 
-2. **WORKOUT_PLAN**:
+2. WORKOUT_PLAN:
    - 4 exercises per day
    - Include sets and reps
    - Match intensity to the user’s goal and fitness level
 
 The plan must follow dietary preferences, avoid allergens, and align with the user’s goal (e.g., weight loss, muscle gain, flexibility). Meals should reflect the user's cultural background if specified.
-
+The user profile is as follows:
+{user_context}
 Output must include:
 - A clear `MEAL_PLAN` section with daily breakdowns
-MEAL_PLAN FORMAT:
-MEAL_PLAN:
 For each day (Day 1 to N, where N is user requested days):
-Day 
+Day X:
 - Breakfast (XXX calories(compusolry)):
   1. [[Meal item 1] with quantity(compusolry)]
   2. [[Meal item 2] with quantity(compusolry)]
@@ -163,6 +160,7 @@ Day
 
 Total Daily Calories: XXXX(compusolry)
 
+
 - A `WORKOUT_PLAN` section with daily exercises
 
 WORKOUT_PLAN FORMAT:
@@ -179,20 +177,47 @@ Day X - [Focus Area]:
 4. [Exercise 4 with sets/reps]
 
 - 7 days of both meal and workout plans
+
+CULTURAL & PERSONAL CUSTOMIZATION:
+1. If the user mentions their nationality, country, or cultural background (e.g., "Indian food," "I am from Mexico"), provide meals specific to that culture using authentic ingredients and dishes.
+2. If the user mentions dietary restrictions (vegetarian, vegan, halal, kosher, etc.), strictly adhere to those guidelines.
+3. If user mentions specific physical attributes (age, weight, height, BMI, gender), customize the plan accordingly with appropriate calorie counts and exercise intensity.
+4. For medical conditions (diabetes, hypertension, etc.), include appropriate dietary modifications.
+5. Match exercise intensity to stated fitness levels (beginner, intermediate, advanced).
+
+Notes:
+- Each meal MUST include calorie count
+- Each meal type MUST have EXACTLY 3 items
+- Each day MUST have a total calorie count
+- Each workout day MUST have EXACTLY 4 exercises
+- Workouts MUST be appropriate for the specified fitness level
+- Include expected results after following the plan for specified months
+- Adjust intensity based on experience level
+- Consider any health conditions or dietary restrictions in recommendations
+- IMPORTANT: Both MEAL_PLAN and WORKOUT_PLAN must have EXACTLY the same number of days
+
 """
-    },
-    {
-        "role": "user",
-        "content": "Please generate my 7-day meal and workout plan."
-    }
-]
+                },
+                {
+                    "role": "user",
+                    "content": unique_prompt
+                }
+            ]
         )
 
+        # Defensive: ensure reply is always a string
         reply = response.choices[0].message.content
+        if not reply:
+            print("No reply from OpenAI, sending error to frontend.")
+            return jsonify({"error": "No reply from OpenAI"}), 500
 
-        return jsonify({"reply": reply, "cached": False})
+        # Print what is being sent to the frontend
+        print("Sending to frontend:", {"reply": reply, "cached": False})
+
+        return jsonify({"reply": reply, "cached": False}), 200
 
     except Exception as e:
+        print("Exception in /chat:", e)
         return jsonify({"error": str(e)}), 500
 
 # @app.route('/check-cache', methods=['OPTIONS', 'POST'])
@@ -299,8 +324,26 @@ if __name__ == '__main__':
 
 #     except Exception as e:
 #         return jsonify({"error": str(e)}), 500
-
 # Run locally
 if __name__ == '__main__':
     app.run(host='127.0.0.1', port=5000, debug=True)
+#                 return jsonify({
+#                     "cached": True,
+#                     "reply": json.loads(cached_response),
+#                     "requestedDays": prompt_info["requested_days"],
+#                     "promptInfo": prompt_info
+#                 })
+#             else:
+#                 print(f"Cache check MISS for key: '{prompt[:50]}...'")
+#         except Exception as e:
+#             print(f"Error checking cache: {str(e)}")
+#             # Continue with miss response if cache check fails
+        
+#         return jsonify({
+#             "cached": False,
+#             "promptInfo": prompt_info
+#         })
+
+#     except Exception as e:
+#         return jsonify({"error": str(e)}), 500
 
